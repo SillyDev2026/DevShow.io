@@ -12,7 +12,7 @@ process.env.CORS_ORIGINS='https://sillydev2026.github.io';
 const {server}=await import('../server/index.js');
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const host=`http://127.0.0.1:${server.address().port}`;
-after(async()=>{await new Promise(resolve=>server.close(resolve));fs.rmSync(dir,{force:true,recursive:true});});
+after(async()=>{await new Promise(resolve=>server.close(resolve));(await import('../server/db.js')).db.close();fs.rmSync(dir,{force:true,recursive:true});});
 const http=async(path,method='GET',data,token)=>{
   const response=await fetch(host+'/api'+path,{method,headers:{Origin:'https://sillydev2026.github.io',...(data?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},body:data?JSON.stringify(data):undefined});
   return {status:response.status,...await response.json()};
