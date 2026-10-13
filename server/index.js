@@ -18,7 +18,7 @@ const urlValue = v => { const x = clean(v, 500); if (!x) return ''; try { const 
 const tokenHash = token => crypto.createHash('sha256').update(token).digest('hex');
 const passwordHash = password => { const salt = crypto.randomBytes(16); const hash = crypto.scryptSync(password, salt, 64); return `scrypt:${salt.toString('hex')}:${hash.toString('hex')}`; };
 const passwordMatch = (password, stored) => { const [,salt,hash] = String(stored).split(':'); if (!salt || !hash) return false; const current = crypto.scryptSync(password, Buffer.from(salt,'hex'), 64); const existing = Buffer.from(hash,'hex'); return existing.length === current.length && crypto.timingSafeEqual(current, existing); };
-const apiUser = u => ({ id:u.id, handle:u.handle, name:u.name, role:u.role, bio:u.bio, github:u.github, website:u.website, color:u.color, avatar:u.name.split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase(), createdAt:u.created_at, followers:Number(u.followers||0) });
+const apiUser = u => ({ id:u.id, handle:u.handle, name:u.name, role:u.role, bio:u.bio, github:u.github, website:u.website, color:u.color,location:u.location||'',skills:JSON.parse(u.skills||'[]'), avatar:u.name.split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase(), createdAt:u.created_at, followers:Number(u.followers||0) });
 const userRow = id => one('SELECT * FROM users WHERE id=?', id);
 function bearer(req) { const match = /^Bearer ([a-f0-9]{64})$/.exec(req.headers.authorization || ''); if (!match) return null; const row = one('SELECT user_id FROM sessions WHERE hash=? AND expires_at>?',tokenHash(match[1]),Date.now()); return row ? userRow(row.user_id) : null; }
 function newSession(user) { const token = crypto.randomBytes(32).toString('hex'); exec('INSERT INTO sessions(hash,user_id,expires_at) VALUES(?,?,?)',tokenHash(token),user.id,Date.now()+30*86400000); return { token, user:apiUser(user) }; }
@@ -36,7 +36,7 @@ function validProject(data) {
 function projectRow(row) {return {id:row.id,creatorId:row.creator_id,title:row.title,tagline:row.tagline,description:row.description,category:row.category,tags:JSON.parse(row.tags||'[]'),repo:row.repo,website:row.website,cover:row.cover,likes:Number(row.likes||0),views:row.views,comments:Number(row.comments||0),daysAgo:Math.max(0,Math.floor((Date.now()-Date.parse(row.created_at+'Z'))/86400000)),theme:'custom',featured:false,createdAt:row.created_at};}
 function projectList() { return query(`SELECT p.*, (SELECT COUNT(*) FROM likes l WHERE l.project_id=p.id) likes,(SELECT COUNT(*) FROM comments c WHERE c.project_id=p.id) comments FROM projects p ORDER BY p.created_at DESC LIMIT 500`).map(projectRow); }
 function bootstrap(user) {
-  const people = query(`SELECT u.id,u.handle,u.name,u.role,u.bio,u.github,u.website,u.color,u.created_at,(SELECT COUNT(*) FROM follows f WHERE f.followed_id=u.id) followers FROM users u ORDER BY u.created_at DESC LIMIT 500`).map(apiUser);
+  const people = query(`SELECT u.id,u.handle,u.name,u.role,u.bio,u.github,u.website,u.color,u.location,u.skills,u.created_at,(SELECT COUNT(*) FROM follows f WHERE f.followed_id=u.id) followers FROM users u ORDER BY u.created_at DESC LIMIT 500`).map(apiUser);
   const data = { projects:projectList(), creators:people, user:user?apiUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[] };
   if (user) {
     data.liked = query('SELECT project_id FROM likes WHERE user_id=?',user.id).map(r=>r.project_id);
@@ -71,13 +71,34 @@ async function body(req) {
 }
 async function handleApi(req,res,url) {
   const method=req.method, route=url.pathname, user=bearer(req);
-  if(method==='GET'&&route==='/api/health')return json(res,200,{ok:true,service:'DevShow API',version:'2.0.0'});
+  if(method==='GET'&&route==='/api/health')return json(res,200,{ok:true,service:'DevShow API',version:'2.1.0'});
   if(method==='GET'&&route==='/api/bootstrap')return json(res,200,bootstrap(user));
   if(method==='POST'&&route==='/api/auth/register') {rateLimit(req,true);const d=await body(req); const handle=clean(d.handle,24),name=clean(d.name,40),email=clean(d.email,254).toLowerCase(),password=String(d.password||'');if(!/^[A-Za-z0-9_-]{3,24}$/.test(handle)||!name||!/^\S+@\S+\.\S+$/.test(email)||password.length<10||password.length>128)fail(400,'Provide a name, username (3–24), valid email and password (10–128 characters).');if(one('SELECT id FROM users WHERE handle=? OR email=?',handle,email))fail(409,'Username or email is already in use.');const id=uid();try{exec('INSERT INTO users(id,email,handle,password_hash,name) VALUES(?,?,?,?,?)',id,email,handle,passwordHash(password),name);}catch(e){if(String(e.message).includes('UNIQUE'))fail(409,'Username or email is already in use.');throw e;}return json(res,201,newSession(userRow(id)));}
   if(method==='POST'&&route==='/api/auth/login'){rateLimit(req,true);const d=await body(req);const email=clean(d.email,254);const password=String(d.password||'');const candidate=one('SELECT * FROM users WHERE email=? OR handle=?',email,email);if(!candidate||!passwordMatch(password,candidate.password_hash))fail(401,'Invalid credentials.');return json(res,200,newSession(candidate));}
   if(method==='POST'&&route==='/api/auth/logout'){auth(user);const token=(req.headers.authorization||'').slice(7);exec('DELETE FROM sessions WHERE hash=?',tokenHash(token));return json(res,200,{ok:true});}
   if(method==='GET'&&route==='/api/me')return json(res,200,{user:apiUser(auth(user))});
-  if(method==='PATCH'&&route==='/api/me'){auth(user);const d=await body(req);const name=clean(d.name,40),handle=clean(d.handle,24),role=clean(d.role,70),bio=clean(d.bio,300),github=urlValue(d.github),website=urlValue(d.website),color=clean(d.color,7);if(!name||!/^[A-Za-z0-9_-]{3,24}$/.test(handle))fail(400,'Invalid name or username.');if((d.github&&!github)||(d.website&&!website)||(github&&!/^https:\/\/github\.com\//.test(github))|| !/^#[a-f\d]{6}$/i.test(color))fail(400,'Invalid profile links or color.');try{exec('UPDATE users SET name=?,handle=?,role=?,bio=?,github=?,website=?,color=? WHERE id=?',name,handle,role,bio,github,website,color,user.id);}catch(e){if(String(e.message).includes('UNIQUE'))fail(409,'Username already taken.');throw e;}return json(res,200,{user:apiUser(userRow(user.id))});}
+  if(method==='GET'&&route==='/api/me/export'){
+    const owner=auth(user);
+    const projects=query('SELECT * FROM projects WHERE creator_id=? ORDER BY created_at DESC',owner.id);
+    return json(res,200,{format:'devshow-account-export',version:1,exportedAt:new Date().toISOString(),
+      account:apiUser(owner),projects:projects.map(projectRow),
+      buildLogs:query('SELECT b.* FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.creator_id=?',owner.id),
+      collections:query('SELECT * FROM collections WHERE owner_id=?',owner.id).map(c=>({id:c.id,name:c.name,description:c.description,projectIds:query('SELECT project_id FROM collection_projects WHERE collection_id=?',c.id).map(x=>x.project_id)})),
+      bookmarks:query('SELECT project_id FROM bookmarks WHERE user_id=?',owner.id).map(x=>x.project_id),
+      following:query('SELECT followed_id FROM follows WHERE follower_id=?',owner.id).map(x=>x.followed_id),
+      comments:query('SELECT project_id,body,created_at FROM comments WHERE user_id=?',owner.id),
+      liked:query('SELECT project_id FROM likes WHERE user_id=?',owner.id).map(x=>x.project_id)});
+  }
+  if(method==='POST'&&route==='/api/me/password'){
+    const owner=auth(user),d=await body(req);rateLimit(req,true);
+    if(typeof d.currentPassword!=='string'||typeof d.newPassword!=='string'||d.newPassword.length<10||d.newPassword.length>128)fail(400,'Provide current and new passwords (new password: 10–128 characters).');
+    if(!passwordMatch(d.currentPassword,owner.password_hash))fail(403,'Current password does not match.');
+    exec('UPDATE users SET password_hash=? WHERE id=?',passwordHash(d.newPassword),owner.id);
+    exec('DELETE FROM sessions WHERE user_id=?',owner.id);
+    return json(res,200,{ok:true,reauthRequired:true});
+  }
+  if(method==='GET'&&route==='/api/stats')return json(res,200,{version:'2.1.0',developers:one('SELECT COUNT(*) count FROM users').count,projects:one('SELECT COUNT(*) count FROM projects').count,comments:one('SELECT COUNT(*) count FROM comments').count,updates:one('SELECT COUNT(*) count FROM build_logs').count});
+  if(method==='PATCH'&&route==='/api/me'){auth(user);const d=await body(req);const name=clean(d.name,40),handle=clean(d.handle,24),role=clean(d.role,70),bio=clean(d.bio,300),github=urlValue(d.github),website=urlValue(d.website),color=clean(d.color,7),location=clean(d.location,80),skills=JSON.stringify([...new Set((Array.isArray(d.skills)?d.skills:String(d.skills||'').split(',')).map(x=>clean(x,24)).filter(Boolean))].slice(0,10));if(!name||!/^[A-Za-z0-9_-]{3,24}$/.test(handle))fail(400,'Invalid name or username.');if((d.github&&!github)||(d.website&&!website)||(github&&!/^https:\/\/github\.com\//.test(github))|| !/^#[a-f\d]{6}$/i.test(color))fail(400,'Invalid profile links or color.');try{exec('UPDATE users SET name=?,handle=?,role=?,bio=?,github=?,website=?,color=?,location=?,skills=? WHERE id=?',name,handle,role,bio,github,website,color,location,skills,user.id);}catch(e){if(String(e.message).includes('UNIQUE'))fail(409,'Username already taken.');throw e;}return json(res,200,{user:apiUser(userRow(user.id))});}
   if(method==='GET'&&route==='/api/users')return json(res,200,{users:query(`SELECT u.id,u.name,u.handle,u.role,u.bio,u.github,u.website,u.color,u.created_at,(SELECT COUNT(*) FROM follows f WHERE f.followed_id=u.id) followers FROM users u ORDER BY followers DESC LIMIT 100`).map(apiUser)});
   if(method==='GET'&&route.startsWith('/api/users/')){const handle=decodeURIComponent(route.split('/')[3]||'');const target=one('SELECT * FROM users WHERE handle=?',handle);if(!target)fail(404,'Developer not found.');return json(res,200,{user:apiUser(target),projects:projectList().filter(p=>p.creatorId===target.id)});}
   if(method==='GET'&&route==='/api/projects')return json(res,200,{projects:projectList()});
