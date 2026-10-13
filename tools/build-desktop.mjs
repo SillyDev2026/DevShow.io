@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {build} from 'esbuild';
-const files=['index.html','config.js','styles.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js'];
+const files=['index.html','config.js','styles.css','styles-fluid.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js'];
 fs.mkdirSync('dist',{recursive:true});
 await build({entryPoints:['tools/desktop-entry.mjs'],outfile:'dist/desktop-entry.cjs',bundle:true,platform:'node',target:'node26',format:'cjs',logLevel:'warning'});
 const output=fs.readFileSync('dist/desktop-entry.cjs','utf8');
