@@ -37,6 +37,29 @@ jobs:
           "$sha  DevShow-Desktop.exe" | Set-Content -Encoding ascii .\dist\DevShow-Desktop.exe.sha256
           & .\dist\DevShow-Desktop.exe --version
           if ($LASTEXITCODE -ne 0) { throw 'Standalone EXE version check failed.' }
+      - name: Package downloadable ZIP archives
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $readme = @'
+          DevShow Desktop
+          ===============
+          Run DevShow-Desktop.exe on Windows. It starts a LOCAL desktop server and
+          saves its data on your computer. No Node.js installation is required.
+
+          The local EXE does not host a public website or shared collaboration
+          backend. For GitHub OAuth and online sync, deploy the Node.js API
+          separately and configure its HTTPS URL.
+
+          Verify the executable with DevShow-Desktop.exe.sha256 before running.
+          '@
+          $readme | Set-Content -Encoding utf8 .\dist\README-Desktop.txt
+          Compress-Archive -Path .\dist\DevShow-Desktop.exe,.\dist\DevShow-Desktop.exe.sha256,.\dist\README-Desktop.txt -DestinationPath .\dist\DevShow-Desktop-Windows.zip -Force
+          git archive --format=zip --output=dist/DevShow-Source.zip HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Source ZIP creation failed.' }
+          foreach ($name in @('DevShow-Desktop-Windows.zip','DevShow-Source.zip')) {
+            if ((Get-Item (Join-Path 'dist' $name)).Length -lt 1000) { throw "Archive invalid: $name" }
+          }
       - name: Publish current desktop download
         if: startsWith(github.ref, 'refs/heads/')
         shell: pwsh
@@ -47,12 +70,12 @@ jobs:
           $tag = 'desktop-latest'
           gh release view $tag --repo '${{ github.repository }}' 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --target '${{ github.sha }}' --repo '${{ github.repository }}' --title 'DevShow Desktop (latest verified)' --notes 'Current verified Windows desktop build. Standalone EXE; local SQLite storage. Download DevShow-Desktop.exe.' --prerelease
+            gh release create $tag --target '${{ github.sha }}' --repo '${{ github.repository }}' --title 'DevShow Desktop (latest verified)' --notes 'Verified Windows desktop build. Download the raw EXE or the Windows ZIP; the source ZIP is included for developers. The desktop server runs locally; public OAuth and collaboration require a hosted API.' --prerelease
             if ($LASTEXITCODE -ne 0) { throw 'Could not create latest desktop release.' }
           }
-          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 --clobber --repo '${{ github.repository }}'
+          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 .\dist\DevShow-Desktop-Windows.zip .\dist\DevShow-Source.zip --clobber --repo '${{ github.repository }}'
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload Windows executable.' }
-          gh release edit $tag --repo '${{ github.repository }}' --notes "Verified source commit: ${{ github.sha }}. Standalone Windows executable with local SQLite storage."
+          gh release edit $tag --repo '${{ github.repository }}' --notes "Verified source commit: ${{ github.sha }}. Verified standalone Windows EXE, Windows ZIP bundle, and source ZIP. The desktop server is local; public collaboration/OAuth require an independently hosted API."
       - name: Publish versioned desktop release
         if: startsWith(github.ref, 'refs/tags/v3.0.')
         shell: pwsh
@@ -63,8 +86,8 @@ jobs:
           $tag = '${{ github.ref_name }}'
           gh release view $tag --repo '${{ github.repository }}' 2>$null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --repo '${{ github.repository }}' --title "DevShow $tag Desktop" --notes 'Standalone Windows desktop application; private SQLite storage.'
+            gh release create $tag --repo '${{ github.repository }}' --title "DevShow $tag Desktop" --notes 'Verified Windows EXE, packaged Windows ZIP and source ZIP. Desktop storage is local; public OAuth requires a hosted backend.'
             if ($LASTEXITCODE -ne 0) { throw 'Could not create release.' }
           }
-          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 --clobber --repo '${{ github.repository }}'
+          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 .\dist\DevShow-Desktop-Windows.zip .\dist\DevShow-Source.zip --clobber --repo '${{ github.repository }}'
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload Windows executable.' }
