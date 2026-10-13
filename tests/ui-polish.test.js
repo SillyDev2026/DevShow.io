@@ -54,7 +54,9 @@ test('live refreshes do not discard active dialog form state',()=>{
 });
 test('search shortcuts and input synchronize the active Explore route',()=>{
   assert.match(main, /history\.replaceState\(null,'','#explore'\)/);
-  assert.match(main, /if\(e\.key==='\/'\|\|\(\(e\.ctrlKey\|\|e\.metaKey\)/);
+  assert.match(main, /e\.key==='\/'/);
+  assert.match(main, /e\.key\.toLowerCase\(\)==='k'/);
+  assert.match(main, /e\.ctrlKey\|\|e\.metaKey/);
   assert.match(main, /nav\.setAttribute\('aria-current','page'\)/);
   assert.match(main, /input\.setSelectionRange\(start,start\)/);
 });
