@@ -7,3 +7,4 @@ server/data/
 *.sqlite-shm
 *.sqlite-wal
 .DS_Store
+dist/
