@@ -1,10 +1,18 @@
-# DevShow.io · v3.0
+# DevShow.io · v3.0.1
 
 **Latest update:** A permissioned, live collaborative project editor using LuauForge's editor interaction model, saved-document synchronization, revision protection, shared chat, and team invitations.
 
 [Latest v3 changes](docs/RELEASE-v3.md) · [Live site](https://sillydev2026.github.io/DevShow.io/) · [Windows Releases](https://github.com/SillyDev2026/DevShow.io/releases)
 
 > The v3 editor foundation is **not** the entire proposed 41-feature product. See the release notes for verified capabilities and pending work. Shared projects require a hosted HTTPS API; the EXE uses a local database by default.
+
+## v3.0.1 — Adaptive SQLite compression and Windows EXE
+
+Large collaborative Luau files, document revisions and desktop-sync drafts now compress adaptively using Node.js Brotli or DEFLATE. The codec preserves old uncompressed SQLite records and API responses remain plain text / JSON. Storage sizes appear in the shared editor.
+
+Run `npm test` for compression safety, corruption and API compatibility tests. To compact existing saved data, stop DevShow, then run `npm run storage:compact -- --db=/absolute/path/devshow.sqlite` to preview and append `--apply` to create a timestamped SQLite backup and rewrite compressible fields. See [compression documentation](docs/STORAGE-COMPRESSION-v3.0.1.md).
+
+The Windows executable build is configured to validate compression during its self-test on GitHub Actions. A new binary is only available once the Windows job completes successfully.
 
 ## Run on a PC
 
@@ -28,7 +36,7 @@ npm run test:desktop
 node --build-sea dist/sea-config.json
 ```
 
-A passing workflow on a `v2.8.*` Git tag attaches `DevShow-Desktop.exe` directly to GitHub Releases. **The source repository and Windows build workflow do not by themselves mean the executable is available.**
+A passing workflow on a `v3.0.*` Git tag attaches `DevShow-Desktop.exe` directly to GitHub Releases. **The source repository and Windows build workflow do not by themselves mean the executable is available.**
 
 ## Public hosting without Cloudflare
 

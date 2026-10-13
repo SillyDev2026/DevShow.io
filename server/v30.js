@@ -1,6 +1,7 @@
 import {one,query,exec,uuid,transaction} from './db.js';
 import {clean,need,readJson,requiredUser,notify} from './security.js';
 import {emit} from './v30-live.js';
+import {packText,unpackText,storageStats} from './storage-codec.js';
 
 const ok=(send,data,status=200)=>{send(status,data);return true;};
 const validId='[a-f0-9-]{36}';
@@ -25,20 +26,27 @@ export async function routeV30(req,url,send,rate,user){
       const p=project(pid);
       return ok(send,{project:{id:pid,title:p.title,visibility:p.visibility},role,documents:query('SELECT * FROM collaborative_documents WHERE project_id=? ORDER BY path',pid).map(summary),members:listMembers(pid),owner:one('SELECT handle,name,id FROM users WHERE id=?',p.creator_id)});
     }
+    if(part==='storage'&&method==='GET'){
+      const docs=query('SELECT content FROM collaborative_documents WHERE project_id=?',pid);
+      const history=query('SELECT r.content FROM collaborative_revisions r JOIN collaborative_documents d ON d.id=r.document_id WHERE d.project_id=?',pid);
+      const all=docs.concat(history);let originalBytes=0,storedBytes=0,compressed=0;
+      for(const row of all){const stat=storageStats(row.content,{maxBytes:90000});originalBytes+=stat.originalBytes;storedBytes+=stat.storedBytes;if(stat.codec==='compressed')compressed++;}
+      return ok(send,{documents:docs.length,revisions:history.length,compressed,originalBytes,storedBytes,savedBytes:originalBytes-storedBytes});
+    }
     if(part==='documents'&&method==='POST'){
       rate(req,'write');requireEditor(pid,user);
-      const d=await readJson(req);const name=clean(d.path,120),language=clean(d.language||'luau',20);
+      const d=await readJson(req,110000);const name=clean(d.path,120),language=clean(d.language||'luau',20);
       need(pathPattern.test(name)&&!name.includes('..')&&!name.startsWith('/')&&!name.endsWith('/')&&!name.includes('//'),400,'Invalid document path.');
       need(languages.has(language),400,'Unsupported document language.');
       need(one('SELECT COUNT(*) n FROM collaborative_documents WHERE project_id=?',pid).n<80,409,'Workspace file limit reached.');
       const content=d.content===undefined?'':sourceText(d),id=uuid();
-      try{exec('INSERT INTO collaborative_documents(id,project_id,path,language,content,updated_by) VALUES(?,?,?,?,?,?)',id,pid,name,language,content,user.id);}catch(e){if(e.message.includes('UNIQUE'))need(false,409,'File already exists.');throw e;}
-      emit(pid,'document',{action:'create',id,path:name,by:user.handle});return ok(send,{document:{id,path:name,language,revision:0,content}},201);
+      try{exec('INSERT INTO collaborative_documents(id,project_id,path,language,content,updated_by) VALUES(?,?,?,?,?,?)',id,pid,name,language,packText(content,{maxBytes:90000}),user.id);}catch(e){if(e.message.includes('UNIQUE'))need(false,409,'File already exists.');throw e;}
+      emit(pid,'document',{action:'create',id,path:name,by:user.handle});return ok(send,{document:{id,path:name,language,revision:0,content,storage:storageStats(packText(content,{maxBytes:90000}),{maxBytes:90000})}},201);
     }
     if(part==='documents'&&method==='GET')return ok(send,{documents:query('SELECT * FROM collaborative_documents WHERE project_id=? ORDER BY path',pid).map(summary)});
     const doc=part.match(new RegExp(`^documents/(${validId})(?:/(history))?$`));
     if(doc){const d=readDoc(doc[1],pid);
-      if(method==='GET'&&!doc[2])return ok(send,{document:{...summary(d),content:d.content}});
+      if(method==='GET'&&!doc[2])return ok(send,{document:{...summary(d),content:unpackText(d.content,{maxBytes:90000}),storage:storageStats(d.content,{maxBytes:90000})}});
       if(method==='GET'&&doc[2])return ok(send,{history:query('SELECT revision,author_id authorId,created_at createdAt FROM collaborative_revisions WHERE document_id=? ORDER BY revision DESC LIMIT 30',d.id)});
       if(method==='PUT'&&!doc[2]){
         rate(req,'write');requireEditor(pid,user);const update=await readJson(req,110000);const text=sourceText(update);
@@ -47,15 +55,15 @@ export async function routeV30(req,url,send,rate,user){
         const success=transaction(()=>{
           current=readDoc(d.id,pid);
           if(current.revision!==update.baseRevision)return false;
-          if(current.content===text)return true;
+          if(unpackText(current.content,{maxBytes:90000})===text)return true;
           exec('INSERT OR IGNORE INTO collaborative_revisions(document_id,revision,content,author_id) VALUES(?,?,?,?)',d.id,current.revision,current.content,current.updated_by);
-          exec("UPDATE collaborative_documents SET content=?,revision=revision+1,updated_by=?,updated_at=datetime('now') WHERE id=? AND revision=?",text,user.id,d.id,current.revision);
+          exec("UPDATE collaborative_documents SET content=?,revision=revision+1,updated_by=?,updated_at=datetime('now') WHERE id=? AND revision=?",packText(text,{maxBytes:90000}),user.id,d.id,current.revision);
           exec("DELETE FROM collaborative_revisions WHERE document_id=? AND revision NOT IN (SELECT revision FROM collaborative_revisions WHERE document_id=? ORDER BY revision DESC LIMIT 30)",d.id,d.id);
           return true;
         });
-        if(!success)return ok(send,{error:'Conflicting changes. Reload, compare or merge the document before saving.',current:{content:current.content,revision:current.revision}},409);
+        if(!success)return ok(send,{error:'Conflicting changes. Reload, compare or merge the document before saving.',current:{content:unpackText(current.content,{maxBytes:90000}),revision:current.revision}},409);
         const latest=readDoc(d.id,pid);if(latest.revision!==current.revision)emit(pid,'document',{action:'update',id:d.id,revision:latest.revision,by:user.handle});
-        return ok(send,{document:{...summary(latest),content:latest.content}});
+        return ok(send,{document:{...summary(latest),content:unpackText(latest.content,{maxBytes:90000}),storage:storageStats(latest.content,{maxBytes:90000})}});
       }
       if(method==='DELETE'&&!doc[2]){rate(req,'write');requireEditor(pid,user);exec('DELETE FROM collaborative_documents WHERE id=?',d.id);emit(pid,'document',{action:'delete',id:d.id,by:user.handle});return ok(send,{ok:true});}
     }

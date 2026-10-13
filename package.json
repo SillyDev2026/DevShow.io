@@ -1,15 +1,20 @@
 {
   "name": "devshow-io",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=22.13.0"},
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "description": "DevShow — open-source developer community with Node.js, SQLite and GitHub Pages frontend",
   "scripts": {
     "start": "node server/index.js",
     "test": "node --test tests/*.test.js && node tests/smoke.mjs",
     "build:desktop": "node tools/build-desktop.mjs",
-    "test:desktop": "node tools/build-desktop.mjs && node dist/desktop-entry.cjs --self-test"
+    "test:desktop": "node tools/build-desktop.mjs && node dist/desktop-entry.cjs --self-test",
+    "storage:compact": "node tools/compact-storage.mjs"
   },
-  "devDependencies": {"esbuild": "0.28.2"}
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
 }

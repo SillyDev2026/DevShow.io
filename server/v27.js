@@ -1,3 +1,4 @@
+import {packText,unpackText} from './storage-codec.js';
 import {query,one,exec,uuid,transaction} from './db.js';
 import {clean,need,error,readJson,requiredUser,validUrl} from './security.js';
 import {projectRecord,permitted} from './projects.js';
@@ -50,7 +51,7 @@ export async function routeV27(req,url,send,rate,user){
   }
   if(path==='/api/v2/sync'){
     requiredUser(user);
-    if(method==='GET'){const r=one('SELECT revision,payload,updated_at updatedAt FROM desktop_sync WHERE user_id=?',user.id);return ok(send,r?{revision:r.revision,data:JSON.parse(r.payload),updatedAt:r.updatedAt}:{revision:0,data:{},updatedAt:null});}
+    if(method==='GET'){const r=one('SELECT revision,payload,updated_at updatedAt FROM desktop_sync WHERE user_id=?',user.id);return ok(send,r?{revision:r.revision,data:JSON.parse(unpackText(r.payload,{maxBytes:12000})),updatedAt:r.updatedAt}:{revision:0,data:{},updatedAt:null});}
     if(method==='PUT'){
       rate(req,'write');const d=await readJson(req,16384);
       need(Number.isSafeInteger(d.revision)&&d.revision>=0,400,'Supply current revision.');need(d.data&&typeof d.data==='object'&&!Array.isArray(d.data),400,'Invalid sync data.');
@@ -58,7 +59,7 @@ export async function routeV27(req,url,send,rate,user){
       const raw=JSON.stringify(d.data);need(raw.length<=12000,413,'Sync data too large.');
       const existing=one('SELECT revision FROM desktop_sync WHERE user_id=?',user.id);const revision=existing?.revision||0;
       need(revision===d.revision,409,`Sync conflict: server revision is ${revision}. Download the newer copy before uploading.`);
-      exec("INSERT INTO desktop_sync(user_id,revision,payload) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET revision=excluded.revision,payload=excluded.payload,updated_at=datetime('now')",user.id,revision+1,raw);return ok(send,{revision:revision+1});
+      exec("INSERT INTO desktop_sync(user_id,revision,payload) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET revision=excluded.revision,payload=excluded.payload,updated_at=datetime('now')",user.id,revision+1,packText(raw,{maxBytes:12000}));return ok(send,{revision:revision+1});
     }
   }
   if(path==='/api/v2/teams'){

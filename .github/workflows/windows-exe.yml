@@ -19,6 +19,8 @@ jobs:
           node-version: '26'
       - run: npm install --no-audit --no-fund
       - run: npm test
+      - name: Verify compressed SQLite storage
+        run: node --test tests/storage-codec.test.js tests/storage-integration.test.js
       - run: npm run test:desktop
         env:
           DB_PATH: ${{ runner.temp }}\devshow-check.sqlite

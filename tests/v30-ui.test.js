@@ -28,7 +28,7 @@ test('desktop and server package all 3.0 editor dependencies',()=>{
     assert.match(read(name),/src\/editor\/playground-luau\.js/);
     assert.match(read(name),/styles-v30\.css/);
   }
-  assert.match(read('tools/desktop-entry.mjs'),/3\.0\.0/);
+  assert.match(read('tools/desktop-entry.mjs'),/3\.0\.1/);
   assert.match(read('.github/workflows/windows-exe.yml'),/v3\.0\.\*/);
 });
 

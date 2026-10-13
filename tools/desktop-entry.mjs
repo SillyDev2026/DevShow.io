@@ -4,7 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import {execFile} from 'node:child_process';
 
-const VERSION='3.0.0';
+const VERSION='3.0.1';
 if(process.argv.includes('--version')){
   console.log(`DevShow Desktop ${VERSION}`);
 }else{
@@ -21,6 +21,9 @@ if(process.argv.includes('--version')){
     if(testing){
       const {one,db}=await import('../server/db.js');
       const users=one('SELECT COUNT(*) n FROM users').n;
+      const {packText,unpackText}=await import('../server/storage-codec.js');
+      const sample='--!strict\nlocal value = 42\n'.repeat(200);
+      if(unpackText(packText(sample))!==sample)throw Error('Compression codec self-test failed.');
       const root=await fetchLocalAsset(server);
       db.close();
       if(temporary){for(const suffix of ['', '-wal', '-shm'])try{fs.rmSync(process.env.DB_PATH+suffix,{force:true});}catch{}}

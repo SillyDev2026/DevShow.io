@@ -56,4 +56,4 @@ async function handler(req,res){
   }catch(e){if(!e.status)console.error('DevShow:',e);if(!res.headersSent)send(res,e.status||500,{error:e.status?e.message:'Internal server error.'});else res.end();}
 }
 export const server=http.createServer(handler);
-if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v3.0.0 at http://localhost:${PORT}`));
+if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v3.0.1 at http://localhost:${PORT}`));
