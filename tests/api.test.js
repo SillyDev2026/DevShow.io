@@ -9,7 +9,7 @@ process.env.CORS_ORIGINS='http://localhost:3000,https://sillydev2026.github.io';
 const { server }=await import('../server/index.js');
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
 const base=`http://127.0.0.1:${server.address().port}`;
-after(async()=>{await new Promise(done=>server.close(done));fs.rmSync(dir,{recursive:true,force:true});});
+after(async()=>{await new Promise(done=>server.close(done));(await import('../server/db.js')).db.close();fs.rmSync(dir,{recursive:true,force:true});});
 const request=async(url,method='GET',data,token,origin='https://sillydev2026.github.io')=>{ const res=await fetch(base+'/api'+url,{method,headers:{Origin:origin,...(data?{'Content-Type':'application/json'}:{}),...(token?{Authorization:`Bearer ${token}`}:{})},body:data?JSON.stringify(data):undefined});return {status:res.status,...(await res.json().catch(()=>({}))),headers:res.headers};};
 const p={title:'My first DevShow project',tagline:'A great project to test end-to-end',description:'This example project proves that DevShow can store information across requests and sessions.',category:'Developer Tools',tags:['Luau','Node.js'],repo:'https://github.com/example/project',website:'',cover:''};
 test('health and empty public bootstrap',async()=>{const health=await request('/health');assert.equal(health.status,200);const list=await request('/bootstrap');assert.equal(list.status,200);assert.equal(list.projects.length,0);});
