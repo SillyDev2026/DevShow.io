@@ -1,4 +1,4 @@
-# DevShow.io · v2.5
+# DevShow.io · v2.5.1
 
 **Discover creative projects. Share open-source software. Follow builders.**
 
@@ -81,3 +81,15 @@ tests/                               Regression and smoke tests
 ```
 
 No private .env, database, releases binary or generated `dist/` should be committed.
+
+
+## v2.5.1 — fluid UI refresh
+
+- The main columns and page gutters scale with the available viewport and container width rather than fixed screen-size boxes. Cards use intrinsic `16/9` covers, and their columns automatically adapt to their container.
+- Desktop has a full sidebar, medium screens use an icon-only rail, and phones use a five-column bottom navigation bar with safe-area padding.
+- Mobile search opens a full-width accessible field. The Explore page has persistent grid/list layout choices.
+- Browse by topic directly from Discover. The recent section no longer repeats highlighted projects.
+- Touch targets, forms, dialogs and fonts use rem-based accessible sizing; the dashboard and cards use flexible grids.
+- All previous Node.js API routes, SQLite records, and desktop launcher remain unchanged.
+
+For UI regression checks run `node tests/responsive.test.mjs` (static invariants) and `python tools/test-responsive.py` with Python Playwright and Chromium installed.
