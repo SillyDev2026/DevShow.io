@@ -1,10 +1,21 @@
-# DevShow.io v2.0
+# DevShow.io v2.1
 
 **A home for developers to discover projects, build a portfolio, publish progress, and connect with other makers.**
 
 DevShow v2 now includes a real Node.js API and SQLite-backed account system. GitHub Pages hosts the static website; the Node server hosts the data. **No Cloudflare, paid database service, or frontend build step is required.**
 
 > **Deployment status:** The frontend works as a local demo until you run/deploy the Node.js server and set its public HTTPS URL. GitHub Pages does not execute Node applications or keep a database. Local demo data is separate from accounts on the server; it is not silently uploaded.
+
+
+## DevShow v2.1 — downloadable Windows desktop
+
+DevShow v2.1 now offers a **direct `.exe` download** without ZIP extraction or an end-user Node.js installation. Go to **Windows app** in the site navigation. A GitHub Actions Windows runner builds and verifies the single executable, then publishes `DevShow-Desktop.exe` to GitHub Releases. The download page checks the latest release asset rather than sending people to an unavailable EXE.
+
+Running the desktop executable opens DevShow at `http://127.0.0.1:3217` and stores a persistent SQLite database at `%APPDATA%\DevShow\data\devshow.sqlite`. This is **private PC saving**, not a worldwide API. A separately hosted HTTPS Node server with persistent disk storage remains necessary for shared online profiles.
+
+**New profile & security features:** optional developer skills and location, non-destructive SQLite migration, authenticated JSON account export, password changes that invalidate all active sessions, and server-wide count statistics.
+
+Read [Desktop instructions](docs/DESKTOP.md) for usage, build and security guidance.
 
 ## Features
 
@@ -21,7 +32,7 @@ DevShow v2 now includes a real Node.js API and SQLite-backed account system. Git
 | Collections / boards | Local | Private collections per account |
 | Notifications | Example messages | Likes, comments, new follows |
 | Leaderboard | Samples | Real counts of project engagement |
-| JSON backup | Local-only | Not supported for remote data yet |
+| JSON account export | Local backup | Authenticated export of server-backed account records |
 | Mobile layout, keyboard navigation, light/dark mode | Yes | Yes |
 
 ### Stack
