@@ -3,7 +3,8 @@ import {esc,number,when,href,badge,avatar,empty} from './components.js';
 import {layout,allViews,modal,projectForm,profileForm,pages} from './views.js';
 
 const app=document.querySelector('#app');
-const state={page:'discover',query:'',category:'All',sort:'newest',projects:[],myProjects:[],creators:[],user:null,liked:[],saved:[],following:[],boards:[],notifications:[],updates:{},comments:{},stats:{developers:0,projects:0,comments:0},profile:null,boardId:null,connected:false,error:'',server:serverUrl()};
+const savedView=(()=>{try{return localStorage.getItem('devshow-layout')==='list'?'list':'grid';}catch{return 'grid';}})();
+const state={view:savedView,page:'discover',query:'',category:'All',sort:'newest',projects:[],myProjects:[],creators:[],user:null,liked:[],saved:[],following:[],boards:[],notifications:[],updates:{},comments:{},stats:{developers:0,projects:0,comments:0},profile:null,boardId:null,connected:false,error:'',server:serverUrl()};
 let dialog='',dialogReturn=null,latestDetail=null,busy=false;
 const byId=id=>[...state.myProjects,...state.projects].find(p=>p.id===id);
 const notify=msg=>{const element=document.querySelector('#toast');if(element){element.textContent=msg;element.classList.add('show');setTimeout(()=>element.classList.remove('show'),3400);}document.querySelector('#live-status').textContent=msg;};
@@ -56,6 +57,9 @@ const click=async e=>{
   const action=element.dataset.action,id=element.dataset.id;
   try{
     if(action==='close')closeDialog();
+    else if(action==='focus-search'){const bar=document.querySelector('.topbar');bar?.classList.add('search-active');const field=document.querySelector('#global-search');field?.focus();field?.select();}
+    else if(action==='view'){state.view=element.dataset.value==='list'?'list':'grid';try{localStorage.setItem('devshow-layout',state.view);}catch{}content();}
+    else if(action==='quick-category'){state.category=element.dataset.value;location.hash='explore';if(state.page==='explore')content();}
     else if(action==='menu')show('Navigation',`<div class="menu-links">${pages.map(([key,icon,label])=>`<a href="#${key}">${icon} ${esc(label)}</a>`).join('')}</div>`);
     else if(action==='auth')openAuth();
     else if(action==='auth-tab'){
@@ -129,10 +133,11 @@ async function submitted(e){
 }
 document.addEventListener('click',click);
 document.addEventListener('submit',submitted);
+document.addEventListener('focusout',e=>{if(e.target.id==='global-search')setTimeout(()=>{if(document.activeElement?.id!=='global-search')document.querySelector('.topbar')?.classList.remove('search-active');},100);});
 document.addEventListener('input',e=>{if(e.target.id==='global-search'){state.query=e.target.value;state.page='explore';content();const link=document.querySelector('.location-crumb strong');if(link)link.textContent='Explore';}});
 document.addEventListener('change',e=>{if(e.target.id==='sort'){state.sort=e.target.value;content();}});
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape')closeDialog();
+  if(e.key==='Escape'){if(dialog)closeDialog();else document.querySelector('.topbar')?.classList.remove('search-active');}
   if(e.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)){e.preventDefault();document.querySelector('#global-search')?.focus();}
   if(dialog&&e.key==='Tab'){
     const focusables=[...document.querySelectorAll('.dialog button:not(:disabled),.dialog input:not(:disabled),.dialog textarea:not(:disabled),.dialog select:not(:disabled),.dialog a[href]')].filter(x=>x.offsetParent!==null);
