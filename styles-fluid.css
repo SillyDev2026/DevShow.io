@@ -225,12 +225,26 @@ p { overflow-wrap: anywhere; }
 @media(max-width:47rem){.message-layout{grid-template-columns:minmax(0,1fr)}.message-thread{max-height:42dvh}.v26-banner{aspect-ratio:2.2/1}}
 
 .portfolio-list .project-grid{grid-template-columns:minmax(0,1fr)}.portfolio-featured .project-grid>:first-child{grid-column:1/-1}.sidebar{overflow-y:auto;scrollbar-width:thin}.sidebar nav{flex-shrink:0}
+/* v2.6.1: accessible download and connection controls scale with the page. */
+.release-download { display:flex; flex-wrap:wrap; flex-direction:column; align-items:flex-start; gap:.75rem; margin:1.3rem 0 1rem; min-height:3.5rem; }
+.release-download p { max-width:52ch; margin:0; }
+.release-download .link { color:var(--lime); text-decoration:underline; }
+.download-help { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:clamp(.75rem,2vw,1.5rem); margin-block:clamp(1rem,3vw,2.5rem); }
+.download-help > div { padding:clamp(1rem,2vw,1.5rem); background:var(--panel); border:1px solid var(--edge); border-radius:1rem; }
+.download-help h3 { margin:0 0 .5rem; }
+.download-help p { color:var(--muted); }
+#server-health { overflow-wrap:anywhere; }
+@media (max-width:44rem) { .release-download .button { width:100%; white-space:normal; text-align:center; } }
 
-/* v2.6.1: fluid download, help and connection controls. */
-.release-download{display:flex;flex-wrap:wrap;flex-direction:column;align-items:flex-start;gap:.75rem;margin:1.3rem 0 1rem;min-height:3.5rem}
-.release-download p{max-width:52ch;margin:0}
-.release-download .link{color:var(--lime);text-decoration:underline}
-.download-help{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:clamp(.75rem,2vw,1.5rem);margin-block:clamp(1rem,3vw,2.5rem)}
-.download-help>div{padding:clamp(1rem,2vw,1.5rem);background:var(--panel);border:1px solid var(--edge);border-radius:1rem}
-.download-help h3{margin:0 0 .5rem}.download-help p{color:var(--muted)}#server-health{overflow-wrap:anywhere}
-@media(max-width:44rem){.release-download .button{width:100%;white-space:normal;text-align:center}}
+/* v2.7: proportional team, dashboard, launch and code browser surfaces */
+.v27-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:clamp(.75rem,2vw,1.4rem);margin-block:clamp(1.25rem,3vw,2rem)}
+.v27-list{display:grid;gap:clamp(.65rem,1.3vw,1.1rem);margin-block:1.4rem}
+.v27-item{display:flex;flex-direction:column;align-items:flex-start;gap:.6rem;min-height:8rem}
+.v27-item .button{margin-top:auto}
+.v27-rank{display:flex;align-items:center;gap:clamp(.5rem,1.5vw,1.3rem);flex-wrap:wrap;padding:clamp(.75rem,2vw,1.15rem);border:1px solid var(--edge);border-radius:1rem;background:var(--panel)}
+.v27-grow{flex:1;min-width:9rem;display:grid;gap:.25rem}.v27-grow small{color:var(--muted)}
+.v27-check{display:flex;align-items:center;gap:.75rem;padding:.75rem;border:1px solid var(--edge);border-radius:.7rem;flex-wrap:wrap}.v27-check input[type=number]{margin-left:auto;width:4.2rem}.v27-check input[type=checkbox]{width:1.15rem;height:1.15rem;flex:none}
+.v27-team-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;padding:.8rem 0;border-bottom:1px solid var(--edge)}
+.v27-tree{display:grid;gap:.45rem;margin-block:1rem;max-height:50dvh;overflow:auto}.v27-file{display:flex;align-items:center;justify-content:space-between;gap:.7rem;width:100%;padding:.7rem .85rem;border:1px solid var(--edge);border-radius:.65rem;background:var(--panel2);color:var(--ink);text-align:left;overflow-wrap:anywhere}.v27-file:hover{border-color:var(--lime)}.v27-file small{color:var(--muted)}
+.v27-demo-frame{width:100%;max-width:100%;height:clamp(16rem,52dvh,46rem);border:1px solid var(--edge);border-radius:1rem;margin-block:1rem;background:#fff}
+@media(max-width:40rem){.v27-rank .rank-number{width:1.5rem}.v27-rank .button{width:100%}}

@@ -1,4 +1,4 @@
-name: DevShow v2.6 CI
+name: DevShow v2.7 CI
 on:
   push:
     branches: [main]

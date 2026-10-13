@@ -34,7 +34,7 @@ test('v2.1 account export, profile skills, password rotation and public stats',a
   assert.equal('password_hash' in exported.account,false);
   assert.equal((await request('/me/export')).status,401);
   const stats=await request('/stats');
-  assert.equal(stats.version,'2.6.1');
+  assert.equal(stats.version,'2.7.0');
   assert.equal(stats.developers,2);
   assert.equal((await request('/me/password','POST',{currentPassword:'incorrect',newPassword:'my-new-long-secret'},logged.token)).status,403);
   assert.equal((await request('/me/password','POST',{currentPassword:'lengthy-passphrase-B',newPassword:'my-new-long-secret'},logged.token)).status,200);

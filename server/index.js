@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import * as sea from 'node:sea';
 import './db.js';
 import './features-db.js';
+import './v27-db.js';
 import {routeApi} from './api.js';
 import {makeRateLimiter,error,getUser} from './security.js';
 import {readMedia} from './media.js';
@@ -14,7 +15,7 @@ import {oauthCallback} from './oauth.js';
 const ROOT=process.env.DEVSHOW_ROOT||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PORT=Number(process.env.PORT||3000);
 const ALLOWED=(process.env.CORS_ORIGINS||'https://sillydev2026.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3217,http://127.0.0.1:3217').split(',').map(x=>x.trim()).filter(Boolean);
-const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js'};
+const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js','/src/v27.js':'src/v27.js'};
 const TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const rate=makeRateLimiter();
 const send=(res,status,data)=>{const payload=JSON.stringify(data);res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(payload);};
@@ -24,14 +25,17 @@ async function handler(req,res){
   res.setHeader('X-Frame-Options','DENY');
   res.setHeader('Permissions-Policy','camera=(), microphone=(), geolocation=()');
   const origin=req.headers.origin;
-  if(origin&&ALLOWED.includes(origin)){
+  // A desktop fallback port remains same-origin on loopback, even when 3217 is occupied.
+  const localOrigin=origin&&/^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/.test(origin)&&origin===`http://${req.headers.host}`&&['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.localAddress);
+  const permittedOrigin=!origin||ALLOWED.includes(origin)||localOrigin;
+  if(origin&&permittedOrigin){
     res.setHeader('Access-Control-Allow-Origin',origin);
     res.setHeader('Vary','Origin');
     res.setHeader('Access-Control-Allow-Headers','Authorization,Content-Type');
-    res.setHeader('Access-Control-Allow-Methods','GET,HEAD,POST,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods','GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS');
   }
   try{
-    if(origin&&!ALLOWED.includes(origin))throw error(403,'Origin is not allowed.');
+    if(!permittedOrigin)throw error(403,'Origin is not allowed.');
     if(req.method==='OPTIONS'){res.writeHead(204);res.end();return;}
     rate(req);
     const url=new URL(req.url,'http://localhost');
@@ -47,4 +51,4 @@ async function handler(req,res){
   }catch(e){if(!e.status)console.error('DevShow:',e);if(!res.headersSent)send(res,e.status||500,{error:e.status?e.message:'Internal server error.'});else res.end();}
 }
 export const server=http.createServer(handler);
-if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v2.6.1 at http://localhost:${PORT}`));
+if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v2.7.0 at http://localhost:${PORT}`));

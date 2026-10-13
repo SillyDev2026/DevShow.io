@@ -3,7 +3,7 @@ export function publish(type,payload,recipient='') {
   const packet=`event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`;
   for(const [res,info] of subscriptions){
     if(recipient && info.userId!==recipient)continue;
-    if(info.scope==='private' && !recipient)continue;
+    if(info.scope==='private' && !recipient && type!=='activity')continue;
     try{res.write(packet);}catch{subscriptions.delete(res);}
   }
 }

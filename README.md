@@ -1,8 +1,25 @@
-# DevShow.io · v2.6.1
+# DevShow.io · v2.7.0
 
 **Discover creative projects. Share open-source software. Follow builders.**
 
 [Website](https://sillydev2026.github.io/DevShow.io/) · [Source](https://github.com/SillyDev2026/DevShow.io) · [Windows downloads](https://github.com/SillyDev2026/DevShow.io/releases)
+
+## DevShow v2.7 — Developer teams, projects and releases
+
+This is a **Node.js 22.13+ / SQLite** project with a browser frontend hosted on GitHub Pages. The public website needs a separately hosted HTTPS Node.js API with persistent SQLite data; **the Windows EXE operates locally unless the user explicitly connects a public API.** Existing user and project data is preserved with additive schema migrations.
+
+### New in v2.7
+
+- Live public project activity from project publishing and build updates, backed by single-process SSE.
+- Sandboxed HTTPS interactive demo embeds and a directory/file GitHub code explorer.
+- Developer teams with owner/maintainer/contributor roles, invitations and linked projects (team members cannot yet edit each other's projects).
+- Custom widget layouts for the developer dashboard.
+- Voting on public project feedback, an abuse-resistant contribution-based reputation leaderboard, and notification preferences.
+- A calendar for scheduled public launches and an owner-managed project event editor.
+- Manual, revision-safe account sync of drafts/notes/preferences with JSON download. It does not automatically synchronize desktop SQLite with the public cloud.
+- Fluid responsive page layouts and updated Windows packaging manifest/release workflow for the new modules.
+
+[Complete v2.7 feature and API documentation](docs/RELEASE-v2.7.md)
 
 ## What changed in v2.5
 
@@ -105,11 +122,12 @@ The latest release adds real public posts, developer groups, private messages, l
 - Uploads are limited to 1 MB PNG/JPEG/WebP; project privacy and message ownership are enforced on the server. SSE is single-process and intended as a lightweight notification channel, not a multiplayer editor.
 - Windows packaging is retained but requires the GitHub Windows workflow to generate a current `.exe`; the executable is **not** part of this source archive.
 
-## v2.6.1 — Desktop reliability and quality of life
 
-- The Windows workflow builds from main and from v2.6.* tags, runs the EXE self-test and publishes the raw executable and SHA-256 checksum to the `desktop-latest` prerelease.
-- The Download app page checks actual GitHub release assets before offering a direct .exe download.
-- Desktop automatically chooses a free localhost port if 3217 is busy; supports --version, --self-test and --no-browser.
-- The API connection setting now checks /api/health before switching servers. Existing saved server values remain on failed checks.
+## v2.6.1 — Quality-of-life and Windows download
 
-Windows binaries remain unverified until the Windows Actions run completes successfully. Public multi-user sync requires a separately hosted HTTPS API.
+- **Verified download page:** the website checks the `desktop-latest` release for a directly downloadable `DevShow-Desktop.exe` and its optional SHA-256 checksum. The button only appears when an uploaded EXE asset is present; no outdated v2.2 executable is labeled current.
+- **Safer server configuration:** Settings can test `/api/health` and show the API version before switching servers; failed checks do not change the saved connection.
+- **More reliable desktop launcher:** automatically uses a free loopback port if 3217 is occupied, supports `--no-browser` and `--version`, and keeps SQLite in `%APPDATA%\DevShow\data`. The `--self-test` opens the embedded website and validates the database.
+- **Windows EXE workflow:** pushes to `main` now build and self-test the EXE on Windows; successful runs upload the raw `.exe` and its checksum to the stable `desktop-latest` prerelease (not a ZIP). A version tag `v2.6.*` also creates a versioned release.
+
+**Build status:** the Windows binary is only verified once the Windows GitHub Actions job succeeds and uploads its release assets. Source tests on Linux do not substitute for executing a Windows EXE.

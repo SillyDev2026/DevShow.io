@@ -1,7 +1,7 @@
 import {esc,when,number,badge,empty,avatar} from './components.js';
 import {serverUrl} from './api.js';
 export const mediaSrc=id=>id&&/^[a-f0-9-]{36}$/.test(id)?`${serverUrl()}/api/media/${id}`:'';
-const label=(title,subtitle)=>`<div class="page-heading"><span class="eyebrow">DEVSHOW COMMUNITY · V2.6</span><h1>${esc(title)}<span class="accent">.</span></h1><p>${esc(subtitle)}</p></div>`;
+const label=(title,subtitle)=>`<div class="page-heading"><span class="eyebrow">DEVSHOW COMMUNITY · V2.7</span><h1>${esc(title)}<span class="accent">.</span></h1><p>${esc(subtitle)}</p></div>`;
 const editor=(id,placeholder,max=1500)=>`<form id="${id}" class="form-stack"><label class="field"><span>Your message</span><textarea name="body" required minlength="2" maxlength="${max}" placeholder="${esc(placeholder)}"></textarea></label><button class="button accent-btn" type="submit">Publish →</button></form>`;
 const post=p=>`<article class="community-card"><div class="community-author">${avatar(p.author.name,p.author.color)}<div><b>${esc(p.author.name)}</b> <small>@${esc(p.author.handle)} · ${when(p.createdAt)}</small></div></div><p class="preline">${esc(p.body)}</p></article>`;
 export function activityPage(s){return `${label('Developer feed','Share work in progress, updates, wins and ideas with the community.')}${s.user?editor('feed-form','What have you been building?'):empty('⌁','Join the conversation','Sign in to share developer updates.')}<div class="community-stream">${(s.posts||[]).map(post).join('')||'<p class="muted">No posts yet. Be the first to share an update.</p>'}</div>`;}
