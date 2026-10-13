@@ -1,4 +1,4 @@
-# DevShow.io · v2.5.1
+# DevShow.io · v2.6
 
 **Discover creative projects. Share open-source software. Follow builders.**
 
@@ -12,7 +12,7 @@ This is a clean rewrite of the v2.2 website and server routing. The previous lar
 
 - **Discover / Explore:** shared public feed, category filters, keyword search, popularity and likes sorting, leaderboards and user directory.
 - **Account & Profile Manager:** register, login, edit public profile, add links, skills, location, headline and public pinned project; change password and export JSON.
-- **Creator Studio:** publish/edit/delete projects, upload a cover **by URL**, categorize/tag, link GitHub and external demos, post versioned build logs.
+- **Creator Studio:** publish/edit/delete projects, upload a cover by **URL or image file**, categorize/tag, link GitHub and external demos, post versioned build logs.
 - **Visibility:** `public` (searchable), `unlisted` (available with project link), `private` (owner only), enforced in the API and public feed.
 - **Community:** follows, project likes, bookmarks, private collections, comments, notifications, profile pages.
 - **Open-source collaboration:** public GitHub repository import, live metadata proxy, links to issues, PRs, releases and source code. GitHub credentials and source files are **not** stored in DevShow.
