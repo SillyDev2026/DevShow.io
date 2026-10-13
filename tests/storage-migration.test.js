@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {DatabaseSync} from 'node:sqlite';
-const root=new URL('..',import.meta.url).pathname;
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url));
 test('offline compactor backs up and preserves SQLite content',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'devshow-migrate-'));
  try{
