@@ -1,0 +1,62 @@
+name: DevShow Windows EXE
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'src/**'
+      - 'styles.css'
+      - 'index.html'
+      - 'config.js'
+      - 'assets/**'
+      - 'tools/build-desktop.mjs'
+      - '.github/workflows/windows-exe.yml'
+      - 'package.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: devshow-windows-release
+  cancel-in-progress: false
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+      - name: Test API and frontend
+        run: |
+          node --check src/app.js
+          node --check server/index.js
+          npm test
+      - name: Generate standalone entry
+        run: npm run build:desktop
+      - name: Test generated desktop launcher
+        shell: pwsh
+        run: |
+          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-desktop-test.sqlite'
+          node dist/desktop-entry.cjs --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build Windows EXE using Node SEA
+        run: node --build-sea dist/sea-config.json
+      - name: Verify compiled Windows EXE
+        shell: pwsh
+        run: |
+          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-sea-test.sqlite'
+          & .\dist\DevShow-Desktop.exe --self-test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((Get-Item .\dist\DevShow-Desktop.exe).Length -lt 1000000) { throw 'EXE unexpectedly small.' }
+      - name: Publish direct EXE download to GitHub Releases
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view 'v2.1.0' --repo '${{ github.repository }}' | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create 'v2.1.0' --repo '${{ github.repository }}' --title 'DevShow v2.1 Desktop' --notes 'Single-file Windows DevShow Desktop EXE with local Node.js API and SQLite saving. This is not a globally shared server.'
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          gh release upload 'v2.1.0' '.\dist\DevShow-Desktop.exe' --repo '${{ github.repository }}' --clobber
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
