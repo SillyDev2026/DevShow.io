@@ -20,3 +20,28 @@ test('cross-user follows, likes, bookmarks, comments, notifications',async()=>{c
 test('collections and project build logs persist and enforce permissions',async()=>{const c=await request('/collections','POST',{name:'Useful tools',description:'Cool ones'},bob.token);collectionId=c.collection.id;assert.equal(c.status,201);assert.equal((await request(`/collections/${collectionId}/projects`,'POST',{projectId},bob.token)).enabled,true);assert.equal((await request(`/projects/${projectId}/logs`,'POST',{title:'v2 ready',body:'We have just deployed the new server-backed application.',version:'2.0.0'},alice.token)).status,201);const data=await request('/bootstrap','GET',null,bob.token);assert.ok(data.boards[0].projects.includes(projectId));assert.equal(data.updates[projectId][0].version,'2.0.0');assert.equal((await request(`/collections/${collectionId}`,'DELETE',null,alice.token)).status,403);});
 test('rejects malicious payloads and disallowed browser origins',async()=>{assert.equal((await request('/projects','POST',{...p,website:'javascript:alert(1)'},alice.token)).status,400);assert.equal((await request('/health','GET',null,null,'https://evil.example')).status,403);assert.equal((await request('/projects','POST',p)).status,401);assert.equal((await request('/projects','POST',{...p,category:'Nonexistent'},alice.token)).status,400);});
 test('logout removes session and protects data',async()=>{assert.equal((await request('/auth/logout','POST',{},alice.token)).status,200);assert.equal((await request('/me','GET',null,alice.token)).status,401);assert.equal((await request(`/projects/${projectId}`,'DELETE',null,bob.token)).status,403);});
+
+
+test('v2.1 profile skills, account export, password rotation and stats',async()=>{
+ const auth=await request('/auth/login','POST',{email:'bob@example.com',password:'lengthy-passphrase-B'});
+ assert.equal(auth.status,200);
+ const profile=await request('/me','PATCH',{name:'Bob Builder',handle:'bob_dev',role:'Luau engineer',bio:'I make tools.',github:'https://github.com/example',website:'',color:'#b4ffa6',location:'Alaska',skills:['Luau','Node.js','Luau']},auth.token);
+ assert.equal(profile.status,200);
+ assert.equal(profile.user.location,'Alaska');
+ assert.deepEqual(profile.user.skills,['Luau','Node.js']);
+ const exported=await request('/me/export','GET',null,auth.token);
+ assert.equal(exported.status,200);
+ assert.equal(exported.format,'devshow-account-export');
+ assert.ok(Array.isArray(exported.bookmarks));
+ assert.equal('password_hash' in exported.account,false);
+ assert.equal((await request('/me/export')).status,401);
+ const stats=await request('/stats');
+ assert.equal(stats.status,200);
+ assert.equal(stats.version,'2.1.0');
+ assert.equal(stats.developers,2);
+ assert.equal((await request('/me/password','POST',{currentPassword:'wrong',newPassword:'new-secure-pass-123'},auth.token)).status,403);
+ assert.equal((await request('/me/password','POST',{currentPassword:'lengthy-passphrase-B',newPassword:'new-secure-pass-123'},auth.token)).status,200);
+ assert.equal((await request('/me','GET',null,auth.token)).status,401);
+ assert.equal((await request('/auth/login','POST',{email:'bob@example.com',password:'lengthy-passphrase-B'})).status,401);
+ assert.equal((await request('/auth/login','POST',{email:'bob@example.com',password:'new-secure-pass-123'})).status,200);
+});
