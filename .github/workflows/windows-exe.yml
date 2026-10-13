@@ -5,6 +5,7 @@ on:
     paths:
       - 'server/**'
       - 'src/**'
+      - 'tests/**'
       - 'styles.css'
       - 'index.html'
       - 'config.js'
