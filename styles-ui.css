@@ -1,0 +1,159 @@
+/* DevShow UI hardening: final cascade shared by Pages and Desktop. */
+:root{
+ --ui-gutter:clamp(.875rem,2.6vw,3.5rem);
+ --ui-gap:clamp(.65rem,1.2vw,1.3rem);
+ --ui-hit:2.75rem;
+ --ui-radius:clamp(.65rem,.95vw,1rem);
+}
+html{min-width:0;-webkit-text-size-adjust:100%;scroll-padding-top:5.5rem}
+body,#app{width:100%;min-width:0;overflow-x:clip}
+[hidden]{display:none!important}
+:where(button,a,input,textarea,select):focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+:where(button,a){touch-action:manipulation}
+:where(button,[role="button"]):not(:disabled){-webkit-tap-highlight-color:transparent}
+:where(.main-region,.page-container,.page-container>*,.section,.section>*,.dialog-body,.v30-panel,.v28-panel,.settings-card,.board-card,.project-card){min-width:0}
+:where(.page-container,.dialog-body,.v30-panel,.v28-panel) :is(img,canvas,video,svg,iframe){max-width:100%}
+:where(.page-container,.dialog-body,.v30-panel) :is(pre,code){max-width:100%;overflow-wrap:anywhere}
+:where(.page-container,.dialog-body,.v30-panel) pre{overflow:auto;white-space:pre}
+:where(.page-container,.dialog-body,.v30-panel) :is(h1,h2,h3,p,small,strong,span){overflow-wrap:break-word}
+.page-container{padding:clamp(1rem,2.6vw,2.4rem) var(--ui-gutter) clamp(3.5rem,6vw,6rem);width:100%;max-width:100%}
+.app-layout{grid-template-columns:minmax(0,var(--sidebar-width)) minmax(0,1fr)}
+.sidebar{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.sidebar .nav-link{display:flex;align-items:center;min-height:var(--ui-hit)}
+.sidebar .nav-link:focus-visible{box-shadow:inset .2rem 0 var(--lime)}
+.sidebar-tail,.account-card{min-width:0}
+.topbar{max-width:100%;width:100%;min-height:4.3rem;height:auto;gap:var(--ui-gap);padding:.6rem var(--ui-gutter)}
+.top-actions{min-width:0;flex:0 1 auto;margin-left:auto;gap:clamp(.3rem,.7vw,.75rem)}
+.topbar .top-search{min-width:0;flex:0 1 clamp(9rem,21vw,24rem);width:auto}
+.topbar .top-search input{min-width:0;width:100%}
+.location-crumb{min-width:0;max-width:32%;white-space:normal;line-height:1.4}
+.top-account{flex:none}
+.top-actions .button{min-height:var(--ui-hit)}
+.button{white-space:normal;max-width:100%;min-height:var(--ui-hit);text-align:center;line-height:1.35;overflow-wrap:anywhere}
+.button.small{min-height:2.5rem}
+.icon-button{min-width:var(--ui-hit);min-height:var(--ui-hit)}
+.hero{min-width:0;isolation:isolate;overflow:hidden}
+.hero-copy{min-width:0;position:relative;z-index:1}
+.hero-buttons,.detail-buttons,.settings-actions,.card-footer,.toolbar,.section-title,.page-heading{min-width:0;max-width:100%;flex-wrap:wrap;gap:var(--ui-gap)}
+.hero-buttons .button,.detail-buttons .button,.settings-actions .button{flex:0 1 auto}
+.hero-art{max-width:48%;pointer-events:none}
+.project-grid,.people-grid,.board-grid,.settings-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
+.dashboard-stats,.github-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))}
+.project-card,.person-card,.board-card,.settings-card{height:100%;min-width:0}
+.project-content,.project-card .card-footer{min-width:0}
+.project-cover{aspect-ratio:16/9;height:auto;min-height:0}
+.project-card .card-footer,.author-btn,.card-reactions{max-width:100%;flex-wrap:wrap}
+.tag-row,.chips{max-width:100%;min-width:0;flex-wrap:wrap}
+.profile-panel,.profile-links,.profile-actions{min-width:0;max-width:100%}
+.profile-links{flex-wrap:wrap}
+.profile-banner{max-width:100%}
+.download-hero{gap:clamp(1rem,2.4vw,2rem);flex-wrap:wrap}
+.download-hero>div:first-child{min-width:0;flex:1 1 17rem}
+:where(.dialog,.dialog-body,.dialog header,.dialog form){min-width:0}
+.scrim{padding:max(.75rem,env(safe-area-inset-top)) max(.75rem,env(safe-area-inset-right)) max(.75rem,env(safe-area-inset-bottom)) max(.75rem,env(safe-area-inset-left));overscroll-behavior:contain}
+.dialog{width:min(100%,45rem);max-height:calc(100dvh - 1.5rem);overflow:auto;scrollbar-width:thin}
+.dialog>header{padding:clamp(.8rem,1.6vw,1.25rem);gap:.65rem}
+.dialog-body{padding:clamp(.85rem,2vw,1.5rem)}
+:where(.dialog-body,.form-stack,.form-row)>*{min-width:0}
+.form-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--ui-gap)}
+.dialog :is(input,textarea,select){width:100%;min-width:0;max-width:100%}
+.dialog :is(.detail-header,.detail-summary,.detail-section){min-width:0}
+.dialog .detail-header{flex-wrap:wrap}
+.dialog .detail-splash{width:clamp(9rem,28%,12rem);height:auto;aspect-ratio:6/5}
+.dialog .detail-summary{flex:1 1 12rem}
+.dialog .menu-links{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:.5rem}
+.dialog .menu-links a{min-height:var(--ui-hit);display:flex;align-items:center}
+:where(.v28-grid,.v27-grid) >*,.v28-filter>*,.v28-result>*,.v30-shell>*{min-width:0}
+.v28-filter{grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) minmax(6rem,auto)}
+.v28-actions,.v28-result{max-width:100%;flex-wrap:wrap}
+.v28-result-main{flex:1 1 14rem;min-width:0}
+.v27-demo-frame{max-width:100%;width:100%}
+.v30-shell{grid-template-columns:minmax(12rem,21%) minmax(0,1fr);gap:var(--ui-gap)}
+.v30-sidebar,.v30-workspace,.v30-editor-stage,.v30-editor-wrap,.v30-panel{min-width:0}
+.v30-editor-wrap{width:100%;grid-template-columns:clamp(2.6rem,5%,3.4rem) minmax(0,1fr);height:clamp(19rem,51dvh,44rem)}
+.v30-gutter,.v30-input,.v30-highlight{line-height:1.55;letter-spacing:0;tab-size:4;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:clamp(.77rem,.72rem + .2vw,.9rem);font-weight:500}
+.v30-input,.v30-highlight{padding:.85rem .75rem;white-space:pre;overflow-wrap:normal}
+.v30-chat-form{grid-template-columns:minmax(0,1fr) auto}
+.v30-toolbar :is(button,input,select){max-width:100%}
+.v30-file{overflow-wrap:anywhere}
+#toast{position:fixed;max-width:min(90vw,27rem);right:max(.75rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));overflow-wrap:anywhere;z-index:140}
+@media(max-width:70rem){
+ .v28-filter{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .v28-filter label:first-child{grid-column:1/-1}
+ .v28-filter .button{width:100%}
+ .project-grid,.people-grid,.board-grid,.settings-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))}
+}
+@media(min-width:40.626rem) and (max-width:56.25rem){
+ .app-layout{grid-template-columns:minmax(4.5rem,9%) minmax(0,1fr)}
+ .sidebar .nav-link{justify-content:center;padding:.7rem .25rem}
+ .sidebar .nav-link .nav-glyph{font-size:1.35rem}
+ .sidebar .nav-link .nav-count{display:none}
+ .topbar .top-search{flex:0 1 clamp(8rem,25vw,15rem)}
+ .top-publish{display:none}
+ .page-container{padding-inline:clamp(.85rem,2vw,1.5rem)}
+ .v30-shell{grid-template-columns:minmax(10rem,27%) minmax(0,1fr)}
+}
+@media(max-width:48rem){
+ .form-row{grid-template-columns:minmax(0,1fr)}
+ .v30-shell{grid-template-columns:minmax(0,1fr);display:grid}
+ .v30-sidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .v30-sidebar .v30-files{grid-column:1/-1;max-height:11rem;overflow:auto}
+ .v30-editor-wrap{height:clamp(19rem,51dvh,36rem)}
+ .dialog .detail-splash{width:100%;aspect-ratio:16/9;max-height:13rem}
+ .download-hero .download-logo{font-size:clamp(3rem,7vw,6rem)}
+}
+@media(max-width:40.625rem){
+ html{scroll-padding-top:4.2rem}
+ .app-layout{display:block;padding-bottom:calc(4.8rem + env(safe-area-inset-bottom))}
+ .sidebar{display:none}
+ .topbar{height:auto;min-height:3.9rem;padding:.55rem var(--ui-gutter)}
+ .mobile-brand{display:flex;min-width:0;align-items:center;white-space:nowrap}
+ .location-crumb{display:none}
+ .top-actions{min-width:0}
+ .topbar .top-search{display:none}
+ .topbar.search-active .top-search{display:flex;position:absolute;inset:.35rem var(--ui-gutter);width:auto;max-width:none;z-index:5}
+ .topbar.search-active .top-search input{width:100%;opacity:1;min-height:2.75rem}
+ .mobile-bottom{display:flex;max-width:100%;overflow:hidden;padding:.38rem max(.4rem,env(safe-area-inset-right)) calc(.38rem + env(safe-area-inset-bottom));gap:0}
+ .mobile-bottom :is(a,button){display:grid;align-content:center;justify-items:center;flex:1 1 0;width:20%;min-width:0;max-width:20%;min-height:3.4rem;padding:.15rem .1rem;font-size:clamp(1rem,4vw,1.4rem);white-space:normal}
+ .mobile-bottom :is(a,button) small{display:block;width:100%;max-width:100%;font-size:clamp(.59rem,2vw,.72rem);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+ .mobile-bottom .mobile-create{width:auto;height:auto;border-radius:.6rem;min-width:0;min-height:3.4rem}
+ .page-container{padding:clamp(.85rem,3vw,1.25rem) var(--ui-gutter) 2rem}
+ .hero{padding:clamp(1.1rem,4vw,2rem);min-height:clamp(17rem,34svh,26rem)}
+ .hero-copy{width:100%}
+ .hero-art{opacity:.15;max-width:70%;z-index:0}
+ .hero h1{font-size:clamp(1.8rem,8vw,2.7rem)}
+ .hero-buttons{flex-direction:column;align-items:stretch}
+ .hero-buttons .button{width:100%}
+ .project-grid,.people-grid,.board-grid,.settings-grid{grid-template-columns:minmax(0,1fr)}
+ .dashboard-stats,.github-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .toolbar{flex-direction:column;align-items:stretch}
+ .toolbar>*,.sort-label{min-width:0;max-width:100%}
+ .sort-label{margin-left:0;align-self:stretch;justify-content:space-between}
+ .sort-label select{min-width:0;max-width:70%}
+ .v28-filter{grid-template-columns:minmax(0,1fr)}
+ .v28-filter label:first-child{grid-column:auto}
+ .v28-result{flex-direction:column;align-items:stretch}
+ .v28-result .button{width:100%}
+ .v30-sidebar{grid-template-columns:minmax(0,1fr)}
+ .v30-sidebar .v30-files{grid-column:auto}
+ .v30-chat-form{grid-template-columns:minmax(0,1fr)}
+ .v30-chat-form .button{width:100%}
+ .v30-editor-wrap{grid-template-columns:clamp(2.35rem,9%,2.8rem) minmax(0,1fr);height:clamp(18rem,48dvh,30rem)}
+ .v30-gutter{padding:.85rem .35rem .85rem .1rem}
+ .v30-input,.v30-highlight{font-size:clamp(.74rem,2.9vw,.88rem);padding:.85rem .5rem}
+ .scrim{padding:.5rem}
+ .dialog{width:100%;max-height:calc(100dvh - 1rem)}
+ .dialog-body{padding:clamp(.75rem,3vw,1rem)}
+ #toast{bottom:calc(5rem + env(safe-area-inset-bottom));left:var(--ui-gutter);right:var(--ui-gutter);max-width:none}
+}
+@media(max-width:23rem){
+ .mobile-brand{font-size:1rem}
+ .topbar .top-actions{gap:.2rem}
+ .topbar .icon-button{min-width:2.35rem;min-height:2.35rem}
+ .mobile-bottom small{font-size:.56rem}
+ .v30-editor-wrap{grid-template-columns:2.2rem minmax(0,1fr)}
+ .v30-gutter,.v30-input,.v30-highlight{font-size:.73rem}
+}
+@media(prefers-reduced-motion:reduce){
+ :where(.project-card,.button,.nav-link,.top-search,.dialog){transition:none!important;animation:none!important}
+}

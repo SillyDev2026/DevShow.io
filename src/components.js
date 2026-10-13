@@ -1,6 +1,6 @@
 export const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const number = x => new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(Number(x)||0);
-export const when = x => x ? new Date(String(x).replace(' ','T')+'Z').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '';
+export const when = value => { if (!value) return ''; const raw=String(value).trim().replace(' ','T'); const stamp=/[zZ]$|[+-]\d\d:\d\d$/.test(raw)?raw:raw+'Z'; const date=new Date(stamp); return Number.isNaN(date.getTime())?'':date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); };
 export const href = value => {try{const u=new URL(value);return ['https:','http:'].includes(u.protocol)?esc(u.href):'#';}catch{return '#';}};
 export const fields=(name,label,value='',extra='')=>`<label class="field"><span>${esc(label)}</span><input name="${name}" value="${esc(value)}" ${extra}></label>`;
 export const area=(name,label,value='',extra='')=>`<label class="field"><span>${esc(label)}</span><textarea name="${name}" ${extra}>${esc(value)}</textarea></label>`;

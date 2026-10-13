@@ -18,7 +18,7 @@ import {stream as collabStream} from './v30-live.js';
 const ROOT=process.env.DEVSHOW_ROOT||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PORT=Number(process.env.PORT||3000);
 const ALLOWED=(process.env.CORS_ORIGINS||'https://sillydev2026.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3217,http://127.0.0.1:3217').split(',').map(x=>x.trim()).filter(Boolean);
-const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js','/src/v27.js':'src/v27.js','/src/v28.js':'src/v28.js'};
+const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/styles-ui.css':'styles-ui.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js','/src/v27.js':'src/v27.js','/src/v28.js':'src/v28.js'};
 ASSETS['/src/notification-inbox.js']='src/notification-inbox.js';ASSETS['/src/v30.js']='src/v30.js';ASSETS['/src/editor/playground-luau.js']='src/editor/playground-luau.js';ASSETS['/styles-v30.css']='styles-v30.css';
 const TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const rate=makeRateLimiter();
