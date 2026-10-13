@@ -273,3 +273,53 @@ p { overflow-wrap: anywhere; }
 @media(max-width:70rem){.v28-filter{grid-template-columns:repeat(2,minmax(0,1fr))}.v28-filter label:first-child{grid-column:1/-1}.v28-filter .button{width:100%}}
 @media(max-width:36rem){.v28-filter{grid-template-columns:minmax(0,1fr)}.v28-filter label:first-child{grid-column:auto}.v28-result{align-items:flex-start;flex-direction:column}.v28-result .button{min-height:2.7rem}.v28-grid{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.v28-panel *, .v28-panel *::before,.v28-panel *::after{animation:none!important;transition:none!important}}
+
+
+/* Responsive layout hardening: proportional widths, intrinsic tracks, safe overflow. */
+:root{--page-gutter:clamp(.85rem,3.2vw,3.25rem);--sidebar-width:clamp(12rem,17.5vw,17rem)}
+html,body,#app{width:100%;max-width:100%;min-width:0}
+#app,.app-layout,.main-region,.page-container,.topbar,.site-footer{max-width:100%;min-width:0}
+.app-layout{grid-template-columns:minmax(0,var(--sidebar-width)) minmax(0,1fr)}
+.main-region,.page-container,.page-container>*,.section,.section>*,.project-card,.detail-section,.profile-panel,.dialog,.dialog-body{min-width:0}
+:where(.page-container,.dialog-body,.project-card,.profile-panel,.detail-section) :is(img,video,canvas,svg,iframe){max-width:100%}
+:where(.page-container,.dialog-body,.project-card,.profile-panel) :is(pre,code){max-width:100%;overflow-wrap:anywhere}
+:where(.page-container,.dialog-body) pre{overflow-x:auto;white-space:pre}
+:where(.page-container,.dialog-body) :is(h1,h2,h3,p,span,strong,a){overflow-wrap:break-word}
+:where(.page-container,.dialog-body) :is(.toolbar,.section-title,.page-heading,.detail-buttons,.hero-buttons,.top-actions){min-width:0;max-width:100%;flex-wrap:wrap}
+:where(.page-container,.dialog-body) :is(.button,button){white-space:normal;min-width:0;overflow-wrap:anywhere}
+:where(.page-container,.dialog-body) :is(.project-grid,.people-grid,.board-grid,.settings-grid,.dashboard-stats,.github-grid){min-width:0}
+:where(.page-container,.dialog-body) :is(.project-grid,.people-grid,.board-grid,.settings-grid) > *{min-width:0}
+:where(.page-container,.dialog-body) :is(.form-row,.form-stack,.settings-grid) > *{min-width:0}
+.hero,.hero-copy,.hero-buttons,.hero-art{max-width:100%;min-width:0}
+.topbar{box-sizing:border-box}.top-actions{min-width:0}.top-search{min-width:0;flex:0 1 clamp(9rem,23vw,24rem)}
+.scrim{max-width:100vw;max-height:100dvh;overflow:auto;overscroll-behavior:contain}
+.dialog{width:min(100%,46rem);max-width:100%;max-height:calc(100dvh - 2rem);overflow:auto}
+.dialog-body{max-width:100%;overflow-wrap:anywhere}
+#toast{max-width:min(90vw,26rem);right:max(1rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom))}
+@media(max-width:56rem){
+  .app-layout{grid-template-columns:minmax(4.5rem,9%) minmax(0,1fr)}
+  .page-container{padding-inline:clamp(.8rem,2.4vw,1.5rem)}
+  .topbar{padding-inline:clamp(.8rem,2.4vw,1.5rem)}
+  .hero-art{max-width:50%;pointer-events:none}
+}
+@media(max-width:40.625rem){
+  .app-layout{display:block;padding-bottom:calc(4.5rem + env(safe-area-inset-bottom))}
+  .sidebar{display:none}
+  .page-container{padding-inline:clamp(.75rem,3vw,1.25rem)}
+  .topbar{padding-inline:clamp(.75rem,3vw,1.25rem);gap:.5rem}
+  .top-actions{margin-left:auto;gap:.35rem}
+  .top-search{flex:0 1 auto;max-width:45vw}
+  .hero{isolation:isolate;overflow:hidden}
+  .hero-art{right:0;max-width:50%;opacity:.2}
+  .mobile-bottom{width:100%;max-width:100%;padding-inline:max(.5rem,env(safe-area-inset-left)) max(.5rem,env(safe-area-inset-right));padding-bottom:calc(.4rem + env(safe-area-inset-bottom))}
+  .mobile-bottom :is(a,button){flex:1 1 0;max-width:20%;min-width:0;width:auto}
+  .dialog{width:100%;max-height:calc(100dvh - 1rem)}
+  .scrim{padding:.5rem}
+  #toast{right:3vw;left:3vw;max-width:none;bottom:calc(5rem + env(safe-area-inset-bottom))}
+}
+@media(max-width:24rem){
+  .page-container{padding-inline:.7rem}
+  .top-search:focus-within{max-width:41vw}
+  .hero{padding:1.2rem}
+  .mobile-bottom small{font-size:.62rem}
+}
