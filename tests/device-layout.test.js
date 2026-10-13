@@ -25,7 +25,7 @@ test('tablet rail avoids clipped icon navigation',()=>{
 test('desktop cards flow with their available width',()=>{
   assert.match(fluid,/@media\(min-width:70\.001rem\)/);
   assert.match(fluid,/repeat\(auto-fit,minmax\(min\(100%,18rem\),1fr\)\)/);
-  assert.match(fluid,/\.page-container>\*/);
+  assert.match(fluid,/\.page-container\s*>\s*\*/);
 });
 test('Luau editor tracks and line metrics remain synchronized',()=>{
   assert.match(editor,/\.v30-gutter,\.v30-input,\.v30-highlight\{font-family:/);
