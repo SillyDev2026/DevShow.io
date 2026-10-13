@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users(
   handle TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL,
   name TEXT NOT NULL, role TEXT NOT NULL DEFAULT '', bio TEXT NOT NULL DEFAULT '',
   github TEXT NOT NULL DEFAULT '', website TEXT NOT NULL DEFAULT '',
-  color TEXT NOT NULL DEFAULT '#b4ffa6', created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  color TEXT NOT NULL DEFAULT '#b4ffa6', location TEXT NOT NULL DEFAULT '', skills TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS sessions(
   hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -59,3 +59,6 @@ export const query = (sql, ...params) => db.prepare(sql).all(...params);
 export const one = (sql, ...params) => db.prepare(sql).get(...params);
 export const exec = (sql, ...params) => db.prepare(sql).run(...params);
 export function transaction(fn) { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } }
+const userColumns = new Set(db.prepare('PRAGMA table_info(users)').all().map(column => column.name));
+if (!userColumns.has('location')) db.exec("ALTER TABLE users ADD COLUMN location TEXT NOT NULL DEFAULT ''");
+if (!userColumns.has('skills')) db.exec("ALTER TABLE users ADD COLUMN skills TEXT NOT NULL DEFAULT '[]'");
