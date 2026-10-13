@@ -1,23 +1,12 @@
-# DevShow — Release history
+# DevShow release history
 
-## v1.5.0 — Creative Studio (current)
+## v2.5.0 — Clean architecture rebuild
 
-- Redesigned discovery, spotlight, sample metrics marked as demo data
-- Creator Studio and local analytics
-- Editable project metadata and optional external cover URLs
-- Project build update log with version/milestone notes
-- Personal Collections; assign/remove projects per collection
-- Validated JSON backup/restore and settings improvements
-- Mobile More menu, shortcuts and improved modal keyboard behavior
-- Desktop and 390px mobile Chromium smoke-tested
-
-## v1.0.0 — Initial frontend preview
-
-- Discover/Explore, project cards, filters, sorting and search
-- Browser-local project publishing and public GitHub repository metadata import
-- Demo creator profiles, follow, bookmark, like, comments and leaderboard
-- GitHub Pages compatible modular static frontend, responsive design
-
-## v0.1–v0.9 — Prototype plan
-
-Outlined in `ARCHITECTURE.md`. v1.5 remains frontend-only; backend milestones were never claimed to be deployed.
+- Rebuilt GitHub Pages frontend as 4 small ES modules rather than a single large controller.
+- Removed local fake-user/demo persistence and duplicated offline-vs-online state; authoritative SQLite-only records.
+- Refactored Node API into security/project/router/server modules and retained compatible v2.2 endpoints.
+- Refreshed desktop/mobile UI, project manager, profile editor, collection board, build logs, notifications and discover feed.
+- GitHub project import, repository metadata, issues/PR/release links, account export and password rotation retained.
+- Updated Windows SEA build source, tagged Release workflow and deployment instructions.
+- Preserved SQLite schema and non-destructive v2.0/v2.2 migrations.
+- Expanded smoke checks and carried forward the API/privacy regression tests.

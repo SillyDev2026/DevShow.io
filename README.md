@@ -1,165 +1,83 @@
-# DevShow.io v2.2
+# DevShow.io · v2.5
 
-**A home for developers to discover projects, build a portfolio, publish progress, and connect with other makers.**
+**Discover creative projects. Share open-source software. Follow builders.**
 
-DevShow v2.2 includes a real Node.js API and SQLite-backed account system. GitHub Pages hosts the static website; the Node server hosts the data. **No Cloudflare, paid database service, or frontend build step is required.**
+[Website](https://sillydev2026.github.io/DevShow.io/) · [Source](https://github.com/SillyDev2026/DevShow.io) · [Windows downloads](https://github.com/SillyDev2026/DevShow.io/releases)
 
-> **Deployment status:** The frontend works as a local demo until you run/deploy the Node.js server and set its public HTTPS URL. GitHub Pages does not execute Node applications or keep a database. Local demo data is separate from accounts on the server; it is not silently uploaded.
+## What changed in v2.5
 
+This is a clean rewrite of the v2.2 website and server routing. The previous large frontend controller, demo-user storage, and duplicated offline/cloud state were removed. A modular JavaScript interface talks directly to a Node.js API and uses SQLite as the authoritative record store. **Existing SQLite user/project data remains compatible**; non-destructive schema migrations still run when starting the new server.
 
-## v2.2 — Social community + open-source hub
+### Features
 
-- **Public Discover feed:** only public projects appear in search, community lists, and public profile projects. The server enforces visibility on every request.
-- **Project visibility:** Public, Unlisted (anyone with the link), or Private (owner only). Your private and unlisted work remains visible in your signed-in Creator Studio. Existing projects migrate to public to preserve prior behavior.
-- **Profile manager:** select a public project as a pinned showcase; profile skills, location, bio, GitHub link, account export, and password changes remain supported.
-- **GitHub collaboration cards:** validated public GitHub repository metadata, stars, forks, language, license, topics, and links to issues, pull requests, and releases. GitHub data is cached, with an optional server-only API token for rate limits.
-- **Dev collaboration:** likes, comments, follows, collections, bookmarks, and build logs continue using server-side accounts. Unlisted comments/build logs are visible by direct link, but do not appear in Discover.
-- **Deployment:** `Dockerfile`, `.dockerignore`, automated API/desktop tests, volume-backed SQLite example and an explicit no-Cloudflare hosting guide. See **[v2.2 Deployment](docs/DEPLOYMENT-v2.2.md)**.
+- **Discover / Explore:** shared public feed, category filters, keyword search, popularity and likes sorting, leaderboards and user directory.
+- **Account & Profile Manager:** register, login, edit public profile, add links, skills, location, headline and public pinned project; change password and export JSON.
+- **Creator Studio:** publish/edit/delete projects, upload a cover **by URL**, categorize/tag, link GitHub and external demos, post versioned build logs.
+- **Visibility:** `public` (searchable), `unlisted` (available with project link), `private` (owner only), enforced in the API and public feed.
+- **Community:** follows, project likes, bookmarks, private collections, comments, notifications, profile pages.
+- **Open-source collaboration:** public GitHub repository import, live metadata proxy, links to issues, PRs, releases and source code. GitHub credentials and source files are **not** stored in DevShow.
+- **Responsive:** desktop navigation, mobile bottom navigation, keyboard search, accessible form labels and dialogs, reduced-motion support.
+- **Windows desktop:** code for a standalone Node.js single-executable app with private SQLite in `%APPDATA%\DevShow\data` and direct Release uploads when the workflow succeeds.
 
-> **Not yet live worldwide:** The repository contains code, not a running public database. To share across devices, deploy the Node server with public HTTPS and durable storage, then set `window.DEVSHOW_API_URL` in `config.js`. The Windows `.exe` remains a separate local server for personal desktop saving.
+## Run on a PC
 
-## Features
-
-| Feature | Demo (no server) | Server connected |
-|---|---|---|
-| Discover, search, filter & sort projects | Sample projects | Actual community projects |
-| Accounts / login | Local placeholder | Email+password registration and login |
-| Profile manager (display name, handle, bio, links, headline) | Browser storage | Persistent user records |
-| Publish, edit & delete projects | Local | Persistent with ownership checks |
-| Project showcases with cover URLs, tags & categories | Yes | Yes |
-| Public repository import (GitHub) | Local copy | Saves project server-side |
-| Likes, comments, bookmarks & follows | Local | Synced across users |
-| Creator Studio & build logs | Local | Persistent and publicly visible |
-| Collections / boards | Local | Private collections per account |
-| Notifications | Example messages | Likes, comments, new follows |
-| Leaderboard | Samples | Real counts of project engagement |
-| JSON account export | Demo JSON backup | Server-side export of owned account data |
-| Mobile layout, keyboard navigation, light/dark mode | Yes | Yes |
-
-### Stack
-
-- **Frontend:** plain HTML + modern CSS + ES modules, deployable on GitHub Pages, no bundler.
-- **Backend:** Node.js **22.13+**, built-in HTTP server and `node:sqlite`. No `npm install` dependencies are necessary. Using Node 24+ is recommended; on Node 22, `node:sqlite` may show an experimental-feature warning.
-- **Storage:** SQLite database on **a persistent volume**, WAL mode and foreign keys enabled.
-- **Authentication:** scrypt-hashed passwords, random SHA-256-hashed bearer sessions, expires after 30 days, server-side authorization. Session tokens live in the frontend tab's `sessionStorage`, so signing in again is required in a new tab or browser session.
-- **Transport:** HTTPS for a public backend, allowlisted CORS origins.
-
-## Direct Windows `.exe` download
-
-DevShow v2.2 includes a **Windows app** page that detects the actual `DevShow-Desktop.exe` release asset and links directly to it once a Windows CI build succeeds. This is a single-file, self-contained Windows x64 executable built with Node 26 SEA. The user can run it without unpacking a ZIP or installing Node.js; their private local SQLite database persists under `%APPDATA%\DevShow\data\devshow.sqlite`.
-
-The desktop executable starts a loopback-only server at `http://127.0.0.1:3217` and opens the site in the default browser. This provides saving **on that PC**. For publicly shared community data across devices, you still need a separately hosted HTTPS Node.js backend with persistent storage. See [Desktop deployment](docs/DESKTOP.md).
-
-New: server-side JSON account export, password changes that revoke all sessions, developer skills/location, and aggregate stats. See [v2.1 release notes](docs/RELEASES-v2.1.md).
-
-## Run locally
-
-Install a supported Node.js version, then:
+Requires **Node.js 22.13+** (Node 24 or 26 preferred). No npm install needed for the website/API.
 
 ```bash
 npm start
 ```
 
-Visit **http://localhost:3000**. This runs **both** the frontend and API. Register an account, publish a project, and visit Creator Studio. The SQLite database will be created in `server/data/devshow.sqlite`.
-
-Verify:
+Open `http://localhost:3000`. Your database is `server/data/devshow.sqlite` by default. To run the test suite:
 
 ```bash
 npm test
-curl http://localhost:3000/api/health
 ```
 
-## Deploy with GitHub Pages + Node.js (no Cloudflare)
+To build a **Windows .exe** on a supported Node 26 Windows runner:
 
-**1. Frontend — GitHub Pages**
-
-Publish the repository's root on **Settings → Pages → Deploy from branch → `main` → `/(root)`**. The expected address for this repository is:
-
-`https://sillydev2026.github.io/DevShow.io/`
-
-**2. Backend — a persistent Node hosting provider**
-
-Deploy this same repository to any provider that runs long-lived Node.js processes (for example a VPS, Railway with a persistent volume, Render with a persistent disk, or another Node host):
-
-- **Start command:** `npm start`
-- **Runtime:** Node.js 22.13 or newer; recommend Node.js 24+
-- **Port:** use the provider-supplied `PORT`; default 3000
-- **Public URL:** HTTPS, such as `https://your-devshow-api.example.com`
-- **Database:** mount a persistent disk and set `DB_PATH` to an **absolute path inside that disk**, e.g. `/var/lib/devshow/devshow.sqlite`
-- **CORS_ORIGINS:** include the exact frontend origin `https://sillydev2026.github.io` (origin only, **no `/DevShow.io/` path**). Add further origins separated by commas. No wildcard allowed.
-
-**Do not deploy SQLite to a temporary or ephemeral filesystem.** An ordinary free-hosting deployment can erase the database on restart unless it offers persistent storage.
-
-**3. Connect the public website**
-
-Change `config.js` in this repository:
-
-```js
-window.DEVSHOW_API_URL = 'https://your-devshow-api.example.com';
-```
-
-Commit the change. GitHub Pages will then fetch accounts, projects, and activity from your server. While testing, you can also open **Settings → Connect server** in DevShow and enter the URL manually. Localhost is usable for local testing only; it is not reachable from other people's devices.
-
-Public frontend API URL is not a secret. **Never put database credentials, passwords, or authentication secrets in `config.js` or any GitHub Pages file.**
-
-## API summary
-
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/health` | Health check |
-| GET | `/api/bootstrap` | Public project feed + current account data |
-| POST | `/api/auth/register` | Create account |
-| POST | `/api/auth/login` | Sign in |
-| POST | `/api/auth/logout` | Revoke session |
-| GET/PATCH | `/api/me` | Read/edit current profile |
-| GET | `/api/users`, `/api/users/:handle` | Browse public developer profiles |
-| POST | `/api/users/:id/follow` | Follow/unfollow developer |
-| GET/POST | `/api/projects` | Browse/create projects |
-| GET/PATCH/DELETE | `/api/projects/:id` | Project details, editing, deletion |
-| POST | `/api/projects/:id/like` | Toggle like |
-| POST | `/api/projects/:id/bookmark` | Toggle bookmark |
-| POST | `/api/projects/:id/comments` | Publish comment |
-| POST | `/api/projects/:id/logs` | Publish build log |
-| POST | `/api/collections` | Create collection |
-| POST | `/api/collections/:id/projects` | Toggle collection item |
-| DELETE | `/api/collections/:id` | Delete collection |
-| POST | `/api/notifications` | Mark notifications read |
-
-Auth-required routes accept `Authorization: Bearer <session-token>`. All input is validated, SQL queries use bound parameters, and project edit/delete operations enforce author ownership. Read `docs/ARCHITECTURE-v2.md` for database and security details.
-
-## Architecture
-
-```
-GitHub Pages (static HTML / CSS / JS)
-  └── src/cloud.js  ── HTTPS/JSON ──► Node server/index.js
-                                      ├── /api/auth, /api/me
-                                      ├── /api/projects, /api/users
-                                      ├── /api/collections, /api/notifications
-                                      └── server/db.js ──► SQLite (persistent disk)
-```
-
-## Important limitations and future work
-
-- **No managed production server is deployed as part of the GitHub commit.** You must deploy Node separately, provision persistent disk storage, then configure the API URL.
-- Password-reset email, email verification, anti-spam/moderation, image uploads, user blocking, webhooks, and GitHub OAuth are **not implemented**. Public launches should add these before accepting unrestricted registrations.
-- The authenticated session is tab-scoped; closing the tab requires signing in again. This avoids long-lived secrets in `localStorage`.
-- JSON backup/restore currently applies to the v1 local demo, **not server data**.
-- The feed bootstrap endpoint is suitable for a small community; larger communities should add pagination and response caching.
-- Profile/project edits persist on the server only when connected and signed in.
-
-## Tests
-
-`npm test` exercises account registration/login, project ownership, persisted feed, follows, bookmarks, comments, collections, build logs, notifications, validation, and CORS checks; it also runs the original frontend smoke test.
-
-## License
-
-No license has been added yet. All rights reserved unless a license is chosen by the owner.
-
-## Development validation
-
-```sh
-npm test
+```bash
+npm install
 npm run test:desktop
+node --build-sea dist/sea-config.json
 ```
 
-The CI workflow runs the API/security/visibility tests and desktop adapter self-test. Node.js 24 is recommended; Node.js 22.13+ remains supported. See `docs/RELEASES-v2.2.md`.
+A passing workflow on a `v2.5.*` Git tag attaches `DevShow-Desktop.exe` directly to GitHub Releases. **The source repository and Windows build workflow do not by themselves mean the executable is available.**
+
+## Public hosting without Cloudflare
+
+GitHub Pages hosts the **frontend only**. You need a separately hosted **HTTPS Node API with a persistent disk**, such as a VPS or Railway with persistent storage.
+
+1. Deploy `Dockerfile` using Node 24 and attach a writable, durable volume at `/data`.
+2. Configure `PORT=3000`, `DB_PATH=/data/devshow.sqlite`, `CORS_ORIGINS=https://sillydev2026.github.io`.
+3. Set `window.DEVSHOW_API_URL = 'https://your-public-api-host.example.com';` in `config.js`.
+4. Publish GitHub Pages using `main` → `/(root)`.
+
+There is **no Cloudflare dependency**. Do not commit secrets or upload databases to the GitHub Pages repository. The frontend does not store user account credentials. API bearer tokens are session-scoped in browser storage.
+
+### Production warnings
+
+Public registration is not ready for an unrestricted launch until you add email verification, password reset, abuse reporting/moderation, monitoring, backups, and stronger distributed rate limiting. Host storage must be persistent; ephemeral instances lose SQLite data on restart. Enable TLS at the hosting provider/reverse proxy. A desktop `.exe` provides **private local saving**, not global social sync.
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## Project layout
+
+```text
+index.html, styles.css, config.js   GitHub Pages site
+src/main.js                          Application controller & interactions
+src/api.js                           Remote API client and token/session handling
+src/components.js                    Escaped, reusable HTML components
+src/views.js                         Stateless page and form rendering
+server/index.js                      HTTP transport and allowlisted assets
+server/api.js                        REST endpoints and account/business rules
+server/projects.js                   Visibility enforcement and project queries
+server/security.js                   Authentication, validation, rate limiting
+server/db.js                         SQLite schema + non-destructive migrations
+server/github.js                     Safe public GitHub metadata proxy
+tools/build-desktop.mjs              Node 26 SEA bundler config
+tools/desktop-entry.mjs              Local Windows app entry
+.github/workflows/                   CI and tagged Windows Release builds
+tests/                               Regression and smoke tests
+```
+
+No private .env, database, releases binary or generated `dist/` should be committed.

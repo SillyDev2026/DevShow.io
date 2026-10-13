@@ -1,60 +1,35 @@
-name: DevShow Windows EXE
+name: DevShow Windows executable
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'server/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'styles.css'
-      - 'index.html'
-      - 'config.js'
-      - 'assets/**'
-      - 'tools/build-desktop.mjs'
-      - '.github/workflows/windows-exe.yml'
-      - 'package.json'
   workflow_dispatch:
+  push:
+    tags: ['v2.5.*']
 permissions:
   contents: write
-concurrency:
-  group: devshow-windows-release
-  cancel-in-progress: false
 jobs:
-  build-windows:
+  windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '26'
-      - name: Test source
-        run: npm test
-      - name: Generate desktop entry
-        run: npm run build:desktop
-      - name: Test desktop entry
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run test:desktop
+        env:
+          DB_PATH: ${{ runner.temp }}\devshow-verify.sqlite
+      - run: node --build-sea dist/sea-config.json
+      - name: Verify standalone EXE
         shell: pwsh
         run: |
-          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-desktop-test.sqlite'
-          node dist/desktop-entry.cjs --self-test
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build true Windows executable (Node SEA)
-        run: node --build-sea dist/sea-config.json
-      - name: Verify Windows executable
-        shell: pwsh
-        run: |
-          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-sea-test.sqlite'
+          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-exe-selftest.sqlite'
           & .\dist\DevShow-Desktop.exe --self-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ((Get-Item .\dist\DevShow-Desktop.exe).Length -lt 1000000) { throw 'Windows binary unexpectedly small.' }
-      - name: Publish direct EXE to GitHub Releases
+          if ((Get-Item .\dist\DevShow-Desktop.exe).Length -lt 1000000) { throw 'Executable unusually small.' }
+      - name: Publish direct executable
+        if: startsWith(github.ref, 'refs/tags/v2.5.')
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view 'v2.2.0' --repo '${{ github.repository }}' | Out-Null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create 'v2.2.0' --repo '${{ github.repository }}' --title 'DevShow v2.2 Desktop' --notes 'Windows standalone executable. Opens a private localhost DevShow server with SQLite data saved in your AppData folder. This is not the shared public-hosting server.'
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-          gh release upload 'v2.2.0' '.\dist\DevShow-Desktop.exe' --repo '${{ github.repository }}' --clobber
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release create '${{ github.ref_name }}' '.\dist\DevShow-Desktop.exe' --repo '${{ github.repository }}' --title 'DevShow ${{ github.ref_name }} Desktop' --notes 'Standalone Windows desktop companion with private SQLite storage.'

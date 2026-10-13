@@ -1,23 +1,18 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#090c14" />
-  <meta name="description" content="DevShow is where developers share what they're building. Discover projects, follow creators, and find your next obsession." />
-  <meta property="og:title" content="DevShow — Made by developers, for developers" />
-  <meta property="og:description" content="Discover projects worth talking about. Share yours with the world." />
-  <title>DevShow — Build something. Show the world.</title>
-  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a101b" />
+  <meta name="description" content="DevShow — discover open-source projects, connect with developers and show what you are building." />
+  <title>DevShow — made for builders</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./styles.css" />
-  <script src="./config.js"></script>
-  <script type="module" src="./src/app.js"></script>
+  <script src="./config.js" defer></script>
+  <script type="module" src="./src/main.js"></script>
 </head>
 <body>
-  <div id="app"></div>
-  <div id="toast-region" role="status" aria-live="polite"></div>
+  <div id="app"><main class="startup"><h1>DevShow<span class="accent">.</span></h1><p>Connecting to the developer community…</p></main></div>
+  <div id="live-status" class="sr-only" aria-live="polite"></div>
 </body>
 </html>
