@@ -1,0 +1,12 @@
+{
+  "name":"devshow-io",
+  "version":"2.0.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=22.13.0"},
+  "description":"DevShow developer showcase with Node.js SQLite API and GitHub Pages frontend",
+  "scripts":{
+    "start":"node server/index.js",
+    "test":"node --test tests/*.test.js && node tests/smoke.mjs"
+  }
+}
