@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+server/data
+dist
+tests
+tools
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.env*
+!server/.env.example
+upgrade_*.py
+__pycache__

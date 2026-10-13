@@ -1,21 +1,22 @@
-# DevShow.io v2.1
+# DevShow.io v2.2
 
 **A home for developers to discover projects, build a portfolio, publish progress, and connect with other makers.**
 
-DevShow v2 now includes a real Node.js API and SQLite-backed account system. GitHub Pages hosts the static website; the Node server hosts the data. **No Cloudflare, paid database service, or frontend build step is required.**
+DevShow v2.2 includes a real Node.js API and SQLite-backed account system. GitHub Pages hosts the static website; the Node server hosts the data. **No Cloudflare, paid database service, or frontend build step is required.**
 
 > **Deployment status:** The frontend works as a local demo until you run/deploy the Node.js server and set its public HTTPS URL. GitHub Pages does not execute Node applications or keep a database. Local demo data is separate from accounts on the server; it is not silently uploaded.
 
 
-## DevShow v2.1 — downloadable Windows desktop
+## v2.2 — Social community + open-source hub
 
-DevShow v2.1 now offers a **direct `.exe` download** without ZIP extraction or an end-user Node.js installation. Go to **Windows app** in the site navigation. A GitHub Actions Windows runner builds and verifies the single executable, then publishes `DevShow-Desktop.exe` to GitHub Releases. The download page checks the latest release asset rather than sending people to an unavailable EXE.
+- **Public Discover feed:** only public projects appear in search, community lists, and public profile projects. The server enforces visibility on every request.
+- **Project visibility:** Public, Unlisted (anyone with the link), or Private (owner only). Your private and unlisted work remains visible in your signed-in Creator Studio. Existing projects migrate to public to preserve prior behavior.
+- **Profile manager:** select a public project as a pinned showcase; profile skills, location, bio, GitHub link, account export, and password changes remain supported.
+- **GitHub collaboration cards:** validated public GitHub repository metadata, stars, forks, language, license, topics, and links to issues, pull requests, and releases. GitHub data is cached, with an optional server-only API token for rate limits.
+- **Dev collaboration:** likes, comments, follows, collections, bookmarks, and build logs continue using server-side accounts. Unlisted comments/build logs are visible by direct link, but do not appear in Discover.
+- **Deployment:** `Dockerfile`, `.dockerignore`, automated API/desktop tests, volume-backed SQLite example and an explicit no-Cloudflare hosting guide. See **[v2.2 Deployment](docs/DEPLOYMENT-v2.2.md)**.
 
-Running the desktop executable opens DevShow at `http://127.0.0.1:3217` and stores a persistent SQLite database at `%APPDATA%\DevShow\data\devshow.sqlite`. This is **private PC saving**, not a worldwide API. A separately hosted HTTPS Node server with persistent disk storage remains necessary for shared online profiles.
-
-**New profile & security features:** optional developer skills and location, non-destructive SQLite migration, authenticated JSON account export, password changes that invalidate all active sessions, and server-wide count statistics.
-
-Read [Desktop instructions](docs/DESKTOP.md) for usage, build and security guidance.
+> **Not yet live worldwide:** The repository contains code, not a running public database. To share across devices, deploy the Node server with public HTTPS and durable storage, then set `window.DEVSHOW_API_URL` in `config.js`. The Windows `.exe` remains a separate local server for personal desktop saving.
 
 ## Features
 
@@ -32,7 +33,7 @@ Read [Desktop instructions](docs/DESKTOP.md) for usage, build and security guida
 | Collections / boards | Local | Private collections per account |
 | Notifications | Example messages | Likes, comments, new follows |
 | Leaderboard | Samples | Real counts of project engagement |
-| JSON account export | Local backup | Authenticated export of server-backed account records |
+| JSON account export | Demo JSON backup | Server-side export of owned account data |
 | Mobile layout, keyboard navigation, light/dark mode | Yes | Yes |
 
 ### Stack
@@ -42,6 +43,14 @@ Read [Desktop instructions](docs/DESKTOP.md) for usage, build and security guida
 - **Storage:** SQLite database on **a persistent volume**, WAL mode and foreign keys enabled.
 - **Authentication:** scrypt-hashed passwords, random SHA-256-hashed bearer sessions, expires after 30 days, server-side authorization. Session tokens live in the frontend tab's `sessionStorage`, so signing in again is required in a new tab or browser session.
 - **Transport:** HTTPS for a public backend, allowlisted CORS origins.
+
+## Direct Windows `.exe` download
+
+DevShow v2.2 includes a **Windows app** page that detects the actual `DevShow-Desktop.exe` release asset and links directly to it once a Windows CI build succeeds. This is a single-file, self-contained Windows x64 executable built with Node 26 SEA. The user can run it without unpacking a ZIP or installing Node.js; their private local SQLite database persists under `%APPDATA%\DevShow\data\devshow.sqlite`.
+
+The desktop executable starts a loopback-only server at `http://127.0.0.1:3217` and opens the site in the default browser. This provides saving **on that PC**. For publicly shared community data across devices, you still need a separately hosted HTTPS Node.js backend with persistent storage. See [Desktop deployment](docs/DESKTOP.md).
+
+New: server-side JSON account export, password changes that revoke all sessions, developer skills/location, and aggregate stats. See [v2.1 release notes](docs/RELEASES-v2.1.md).
 
 ## Run locally
 
@@ -145,3 +154,12 @@ GitHub Pages (static HTML / CSS / JS)
 ## License
 
 No license has been added yet. All rights reserved unless a license is chosen by the owner.
+
+## Development validation
+
+```sh
+npm test
+npm run test:desktop
+```
+
+The CI workflow runs the API/security/visibility tests and desktop adapter self-test. Node.js 24 is recommended; Node.js 22.13+ remains supported. See `docs/RELEASES-v2.2.md`.

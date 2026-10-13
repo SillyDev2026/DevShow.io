@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS projects(
   title TEXT NOT NULL, tagline TEXT NOT NULL, description TEXT NOT NULL,
   category TEXT NOT NULL, tags TEXT NOT NULL DEFAULT '[]',
   repo TEXT NOT NULL DEFAULT '', website TEXT NOT NULL DEFAULT '', cover TEXT NOT NULL DEFAULT '',
-  views INTEGER NOT NULL DEFAULT 0,
+  views INTEGER NOT NULL DEFAULT 0, visibility TEXT NOT NULL DEFAULT 'public' CHECK(visibility IN ('public','unlisted','private')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_project_created ON projects(created_at DESC);
@@ -59,6 +59,15 @@ export const query = (sql, ...params) => db.prepare(sql).all(...params);
 export const one = (sql, ...params) => db.prepare(sql).get(...params);
 export const exec = (sql, ...params) => db.prepare(sql).run(...params);
 export function transaction(fn) { db.exec('BEGIN IMMEDIATE'); try { const result = fn(); db.exec('COMMIT'); return result; } catch (error) { db.exec('ROLLBACK'); throw error; } }
+
+// Non-destructive migration for existing DevShow v2.0 SQLite databases.
 const userColumns = new Set(db.prepare('PRAGMA table_info(users)').all().map(column => column.name));
 if (!userColumns.has('location')) db.exec("ALTER TABLE users ADD COLUMN location TEXT NOT NULL DEFAULT ''");
 if (!userColumns.has('skills')) db.exec("ALTER TABLE users ADD COLUMN skills TEXT NOT NULL DEFAULT '[]'");
+
+// v2.2: preserve existing projects as public; never replace the user's database.
+const projectColumns = new Set(db.prepare('PRAGMA table_info(projects)').all().map(column => column.name));
+if (!projectColumns.has('visibility')) db.exec("ALTER TABLE projects ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public' CHECK(visibility IN ('public','unlisted','private'))");
+const currentUsers = new Set(db.prepare('PRAGMA table_info(users)').all().map(column => column.name));
+if (!currentUsers.has('pinned_project_id')) db.exec("ALTER TABLE users ADD COLUMN pinned_project_id TEXT NOT NULL DEFAULT ''");
+db.exec('CREATE INDEX IF NOT EXISTS idx_projects_visibility_date ON projects(visibility,created_at DESC)');
