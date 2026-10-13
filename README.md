@@ -93,3 +93,14 @@ No private .env, database, releases binary or generated `dist/` should be commit
 - All previous Node.js API routes, SQLite records, and desktop launcher remain unchanged.
 
 For UI regression checks run `node tests/responsive.test.mjs` (static invariants) and `python tools/test-responsive.py` with Python Playwright and Chromium installed.
+
+## v2.6 — Developer community expansion
+
+The latest release adds real public posts, developer groups, private messages, live notifications, profile media/themes/portfolio options, GitHub OAuth sign-in/linking (configuration required), repository source preview and releases, Creator Studio roadmaps/feedback, owner-only analytics, and safe persisted media uploads. The previous v2.5.1 API remains compatible and adds tables non-destructively.
+
+- Run the backend: `npm start` (Node.js 22.13+, SQLite built into Node; no runtime npm dependencies).
+- Tests: `npm test`.
+- [v2.6 release details](docs/RELEASES-v2.6.md) · [v2.6 hosting and GitHub OAuth](docs/DEPLOYMENT-v2.6.md).
+- GitHub OAuth, worldwide synchronization and persistent images require a deployed Node server, durable volume and the environment variables described above. GitHub Pages alone cannot host the backend.
+- Uploads are limited to 1 MB PNG/JPEG/WebP; project privacy and message ownership are enforced on the server. SSE is single-process and intended as a lightweight notification channel, not a multiplayer editor.
+- Windows packaging is retained but requires the GitHub Windows workflow to generate a current `.exe`; the executable is **not** part of this source archive.

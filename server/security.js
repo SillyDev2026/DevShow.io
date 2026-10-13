@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { one, exec, uuid } from './db.js';
+import {publish} from './live.js';
 
 export const MAX_BODY = 32_768;
 export const clean = (value, max = 200) => String(value ?? '').trim().slice(0,max);
@@ -31,10 +32,10 @@ export function startSession(user) {
   return {token};
 }
 export function endSession(req){const token=(req.headers.authorization||'').slice(7);if(token)exec('DELETE FROM sessions WHERE hash=?',digest(token));}
-export async function readJson(req) {
+export async function readJson(req,maxBytes=MAX_BODY) {
   need(/^application\/json(?:\s*;|$)/i.test(req.headers['content-type']||''),415,'Expected application/json.');
   const chunks=[];let bytes=0;
-  for await(const part of req){bytes+=part.length;if(bytes>MAX_BODY)throw error(413,'Request too large.');chunks.push(part);}
+  for await(const part of req){bytes+=part.length;if(bytes>maxBytes)throw error(413,'Request too large.');chunks.push(part);}
   let obj;try{obj=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{throw error(400,'Invalid JSON.');}
   need(obj&&typeof obj==='object'&&!Array.isArray(obj),400,'Expected a JSON object.');
   return obj;
@@ -42,7 +43,10 @@ export async function readJson(req) {
 export function publicUser(u) {
   let skills=[];try{skills=JSON.parse(u.skills||'[]');}catch{}
   const pin=u.pinned_project_id && one("SELECT id FROM projects WHERE id=? AND creator_id=? AND visibility='public'",u.pinned_project_id,u.id);
-  return {id:u.id,name:u.name,handle:u.handle,role:u.role||'',bio:u.bio||'',github:u.github||'',website:u.website||'',color:u.color||'#b4ffa6',location:u.location||'',skills:Array.isArray(skills)?skills:[],pinnedProjectId:pin?.id||'',createdAt:u.created_at};
+  const projects=one("SELECT COUNT(*) n FROM projects WHERE creator_id=? AND visibility='public'",u.id)?.n||0;
+  const followers=one('SELECT COUNT(*) n FROM follows WHERE followed_id=?',u.id)?.n||0;
+  const badges=['Builder',...(projects>=1?['Publisher']:[]),...(projects>=5?['Prolific Creator']:[]),...(followers>=10?['Community Favorite']:[])];
+  return {id:u.id,name:u.name,handle:u.handle,role:u.role||'',bio:u.bio||'',github:u.github||'',website:u.website||'',color:u.color||'#b4ffa6',location:u.location||'',skills:Array.isArray(skills)?skills:[],pinnedProjectId:pin?.id||'',avatarId:u.avatar_media_id||'',bannerId:u.banner_media_id||'',theme:u.profile_theme||'dark',portfolioLayout:u.portfolio_layout||'grid',status:u.status||'building',badges,createdAt:u.created_at};
 }
 export const toggle = (table,a,owner,b,id) => {
   const old=one(`SELECT 1 FROM ${table} WHERE ${a}=? AND ${b}=?`,owner,id);
@@ -50,11 +54,11 @@ export const toggle = (table,a,owner,b,id) => {
   else exec(`INSERT INTO ${table}(${a},${b}) VALUES(?,?)`,owner,id);
   return !old;
 };
-export const notify = (actor,recipient,kind,projectId='') => {if(actor!==recipient)exec('INSERT INTO notifications(id,user_id,actor_id,kind,project_id) VALUES(?,?,?,?,?)',uuid(),recipient,actor,kind,projectId);};
+export const notify = (actor,recipient,kind,projectId='') => {if(actor!==recipient){exec('INSERT INTO notifications(id,user_id,actor_id,kind,project_id) VALUES(?,?,?,?,?)',uuid(),recipient,actor,kind,projectId);publish('notification',{kind,projectId},recipient);}};
 export function makeRateLimiter(){
   const slots=new Map();
   return (req,mode='api')=>{
-    const ip=req.socket.remoteAddress||'unknown',key=`${ip}:${mode}`,now=Date.now(),limit=mode==='auth'?15:mode==='github'?35:240;
+    const ip=req.socket.remoteAddress||'unknown',key=`${ip}:${mode}`,now=Date.now(),limit=mode==='auth'?15:mode==='github'?35:mode==='write'?60:240;
     const s=slots.get(key);const next=s&&s.until>now?s:{until:now+60000,count:0};next.count++;slots.set(key,next);
     if(next.count>limit)throw error(429,'Rate limit exceeded. Try again shortly.');
     if(slots.size>5000)for(const [k,v] of slots)if(v.until<=now)slots.delete(k);

@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {build} from 'esbuild';
-const files=['index.html','config.js','styles.css','styles-fluid.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js'];
+const files=['index.html','config.js','styles.css','styles-fluid.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js','src/v26.js','src/live.js'];
 fs.mkdirSync('dist',{recursive:true});
 await build({entryPoints:['tools/desktop-entry.mjs'],outfile:'dist/desktop-entry.cjs',bundle:true,platform:'node',target:'node26',format:'cjs',logLevel:'warning'});
 const output=fs.readFileSync('dist/desktop-entry.cjs','utf8');
-if(!output.includes('DevShow v2.5 Desktop')||!output.includes('api/bootstrap'))throw Error('The bundled application is incomplete.');
+if(!output.includes('DevShow v2.6 Desktop')||!output.includes('api/bootstrap'))throw Error('The bundled application is incomplete.');
 fs.writeFileSync('dist/sea-config.json',JSON.stringify({main:'dist/desktop-entry.cjs',mainFormat:'commonjs',output:'dist/DevShow-Desktop.exe',assets:Object.fromEntries(files.map(file=>[file,file])),disableExperimentalSEAWarning:true},null,2)+'\n');
 console.log('DevShow desktop application bundled with',files.length,'UI assets.');

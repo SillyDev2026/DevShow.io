@@ -2,12 +2,16 @@ import { one,query,exec,uuid,transaction } from './db.js';
 import {clean,validUrl,error,need,hashPassword,verifyPassword,getUser,requiredUser,startSession,endSession,readJson,publicUser,toggle,notify} from './security.js';
 import {projectRow,projectRecord,projects,permitted,communityAllowed,parseProject} from './projects.js';
 import {githubMetadata} from './github.js';
+import {routeCommunity} from './community.js';
+import {routeGitHub} from './github-v26.js';
+import {uploadMedia,mediaOwned} from './media.js';
+import {oauthStart,oauthExchange,githubLinked} from './oauth.js';
 
 const profile = id => publicUser(one('SELECT * FROM users WHERE id=?',id));
 const mine = user => projects({scope:'mine',owner:user.id,limit:300});
 function bootstrap(user) {
   const creators=query('SELECT * FROM users ORDER BY created_at DESC LIMIT 200').map(publicUser);
-  const data={version:'2.5.0',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
+  const data={version:'2.6.0',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
   if(user){
     data.liked=query("SELECT l.project_id FROM likes l JOIN projects p ON p.id=l.project_id WHERE l.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
     data.saved=query("SELECT b.project_id FROM bookmarks b JOIN projects p ON p.id=b.project_id WHERE b.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
@@ -24,9 +28,13 @@ const ok=(send,data,status=200)=>send(status,data);
 const matchRoute=(path,re)=>re.exec(path);
 export async function routeApi(req,url,send,rate){
   const method=req.method,path=url.pathname,user=getUser(req);
-  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'2.5.0'});
+  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'2.6.0'});
+  if(method==='GET'&&path==='/api/auth/github/start'){rate(req,'auth');return ok(send,oauthStart(user));}
+  if(method==='POST'&&path==='/api/auth/github/exchange'){rate(req,'auth');const d=await readJson(req);return ok(send,oauthExchange(d.ticket));}
+  if(method==='POST'&&path==='/api/media'){rate(req,'write');return ok(send,{media:await uploadMedia(req,requiredUser(user))},201);}
+  if(method==='GET'&&path==='/api/me/github-status'){requiredUser(user);return ok(send,{linked:githubLinked(user.id)});}
   if(method==='GET'&&path==='/api/bootstrap')return ok(send,bootstrap(user));
-  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'2.5.0',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
+  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'2.6.0',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
   if(method==='GET'&&path==='/api/github/repository'){rate(req,'github');return ok(send,{repository:await githubMetadata(url.searchParams.get('url'))});}
   if(method==='POST'&&path==='/api/auth/register'){
     rate(req,'auth');const d=await readJson(req),handle=clean(d.handle,24),name=clean(d.name,40),email=clean(d.email,254).toLowerCase(),password=String(d.password||'');
@@ -54,10 +62,13 @@ export async function routeApi(req,url,send,rate){
   if(method==='PATCH'&&path==='/api/me'){
     requiredUser(user);const d=await readJson(req),name=clean(d.name,40),handle=clean(d.handle,24),role=clean(d.role,70),bio=clean(d.bio,300),location=clean(d.location,80),color=clean(d.color||'#b4ffa6',7),github=validUrl(d.github),website=validUrl(d.website),pin=clean(d.pinnedProjectId,100);
     const skills=JSON.stringify([...new Set((Array.isArray(d.skills)?d.skills:String(d.skills||'').split(',')).map(s=>clean(s,24)).filter(Boolean))].slice(0,10));
+    const avatarId=mediaOwned(clean(d.avatarId,80),user,'avatar'),bannerId=mediaOwned(clean(d.bannerId,80),user,'banner');
+    const theme=clean(d.theme||'dark',20),portfolioLayout=clean(d.portfolioLayout||'grid',20),status=clean(d.status||'building',30);
+    need(['dark','light','mint','violet'].includes(theme)&&['grid','list','featured'].includes(portfolioLayout)&&['building','collaborating','available'].includes(status),400,'Invalid profile layout or status.');
     need(name&&/^[a-zA-Z0-9_-]{3,24}$/.test(handle),400,'Invalid profile name or handle.');
     need(/^#[0-9a-f]{6}$/i.test(color)&&(!d.github||github)&&(!d.website||website)&&(!github||new URL(github).hostname==='github.com'),400,'Invalid profile links or color.');
     if(pin)need(one("SELECT 1 FROM projects WHERE id=? AND creator_id=? AND visibility='public'",pin,user.id),400,'Pin one of your public projects.');
-    try{exec('UPDATE users SET name=?,handle=?,role=?,bio=?,github=?,website=?,color=?,location=?,skills=?,pinned_project_id=? WHERE id=?',name,handle,role,bio,github,website,color,location,skills,pin,user.id);}catch(e){if(e.message.includes('UNIQUE'))throw error(409,'Username already taken.');throw e;}
+    try{exec('UPDATE users SET name=?,handle=?,role=?,bio=?,github=?,website=?,color=?,location=?,skills=?,pinned_project_id=?,avatar_media_id=?,banner_media_id=?,profile_theme=?,portfolio_layout=?,status=? WHERE id=?',name,handle,role,bio,github,website,color,location,skills,pin,avatarId,bannerId,theme,portfolioLayout,status,user.id);}catch(e){if(e.message.includes('UNIQUE'))throw error(409,'Username already taken.');throw e;}
     return ok(send,{user:profile(user.id)});
   }
   if(method==='GET'&&path==='/api/users')return ok(send,{users:query(`SELECT * FROM users ORDER BY created_at DESC LIMIT 200`).map(publicUser)});
@@ -78,7 +89,7 @@ export async function routeApi(req,url,send,rate){
   if(projectRoute){
     const project=permitted(projectRecord(projectRoute[1]),user);
     if(method==='GET'){
-      if(project.visibility!=='private')exec('UPDATE projects SET views=views+1 WHERE id=?',project.id);
+      if(project.visibility!=='private'){exec('UPDATE projects SET views=views+1 WHERE id=?',project.id);exec("INSERT INTO views_daily(project_id,day,count) VALUES(?,date('now'),1) ON CONFLICT(project_id,day) DO UPDATE SET count=count+1",project.id);}
       const {details}=await import('./projects.js');return ok(send,{project:projectRow(projectRecord(project.id)),creator:profile(project.creator_id),...details(project)});
     }
     if(method==='PATCH'){
@@ -115,5 +126,7 @@ export async function routeApi(req,url,send,rate){
     if(method==='POST'&&collection[2]){const d=await readJson(req),p=permitted(projectRecord(d.projectId),user);return ok(send,{enabled:toggle('collection_projects','collection_id',c.id,'project_id',p.id)});}
   }
   if(method==='POST'&&path==='/api/notifications'){requiredUser(user);exec('UPDATE notifications SET read=1 WHERE user_id=?',user.id);return ok(send,{ok:true});}
+  if(await routeGitHub({req,url,send,rate,user}))return;
+  if(await routeCommunity(req,url,send,rate,user))return;
   throw error(404,'API route not found.');
 }
