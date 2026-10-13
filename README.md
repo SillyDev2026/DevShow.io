@@ -1,47 +1,10 @@
-# DevShow.io · v2.8.0
+# DevShow.io · v3.0
 
-**Discover creative projects. Share open-source software. Follow builders.**
+**Latest update:** A permissioned, live collaborative project editor using LuauForge's editor interaction model, saved-document synchronization, revision protection, shared chat, and team invitations.
 
-[Website](https://sillydev2026.github.io/DevShow.io/) · [Source](https://github.com/SillyDev2026/DevShow.io) · [Windows downloads](https://github.com/SillyDev2026/DevShow.io/releases)
+[Latest v3 changes](docs/RELEASE-v3.md) · [Live site](https://sillydev2026.github.io/DevShow.io/) · [Windows Releases](https://github.com/SillyDev2026/DevShow.io/releases)
 
-## DevShow v2.8 — Creator workspace, privacy and discovery
-
-This is a **Node.js 22.13+ / SQLite** project with a browser frontend hosted on GitHub Pages. The public website needs a separately hosted HTTPS Node.js API with persistent SQLite data; **the Windows EXE operates locally unless the user explicitly connects a public API.** Existing user and project data is preserved with additive schema migrations.
-
-
-## v2.8 new workspace
-
-DevShow now includes a fluid **Workspace 2.8** page with server-side filtered discovery, owner-only project checklists, public release milestones, development stages, developer safety controls, and personal Studio analytics. These are implemented as additive SQLite tables and v3 endpoints; see [the 30-item implementation checklist](docs/RELEASE-v2.8.md). Existing v2.7 functionality remains.
-
-**EXE:** the source contains the revised Node 26 Windows SEA build workflow. The actual Windows executable is produced and verified by GitHub Actions after publication; the source archive is not an EXE. Public sharing still needs an independently hosted HTTPS Node API with durable disk.
-
-### Existing v2.7 features
-
-- Live public project activity from project publishing and build updates, backed by single-process SSE.
-- Sandboxed HTTPS interactive demo embeds and a directory/file GitHub code explorer.
-- Developer teams with owner/maintainer/contributor roles, invitations and linked projects (team members cannot yet edit each other's projects).
-- Custom widget layouts for the developer dashboard.
-- Voting on public project feedback, an abuse-resistant contribution-based reputation leaderboard, and notification preferences.
-- A calendar for scheduled public launches and an owner-managed project event editor.
-- Manual, revision-safe account sync of drafts/notes/preferences with JSON download. It does not automatically synchronize desktop SQLite with the public cloud.
-- Fluid responsive page layouts and updated Windows packaging manifest/release workflow for the new modules.
-
-[Complete v2.7 feature and API documentation](docs/RELEASE-v2.7.md)
-
-## What changed in v2.5
-
-This is a clean rewrite of the v2.2 website and server routing. The previous large frontend controller, demo-user storage, and duplicated offline/cloud state were removed. A modular JavaScript interface talks directly to a Node.js API and uses SQLite as the authoritative record store. **Existing SQLite user/project data remains compatible**; non-destructive schema migrations still run when starting the new server.
-
-### Features
-
-- **Discover / Explore:** shared public feed, category filters, keyword search, popularity and likes sorting, leaderboards and user directory.
-- **Account & Profile Manager:** register, login, edit public profile, add links, skills, location, headline and public pinned project; change password and export JSON.
-- **Creator Studio:** publish/edit/delete projects, upload a cover by **URL or image file**, categorize/tag, link GitHub and external demos, post versioned build logs.
-- **Visibility:** `public` (searchable), `unlisted` (available with project link), `private` (owner only), enforced in the API and public feed.
-- **Community:** follows, project likes, bookmarks, private collections, comments, notifications, profile pages.
-- **Open-source collaboration:** public GitHub repository import, live metadata proxy, links to issues, PRs, releases and source code. GitHub credentials and source files are **not** stored in DevShow.
-- **Responsive:** desktop navigation, mobile bottom navigation, keyboard search, accessible form labels and dialogs, reduced-motion support.
-- **Windows desktop:** code for a standalone Node.js single-executable app with private SQLite in `%APPDATA%\DevShow\data` and direct Release uploads when the workflow succeeds.
+> The v3 editor foundation is **not** the entire proposed 41-feature product. See the release notes for verified capabilities and pending work. Shared projects require a hosted HTTPS API; the EXE uses a local database by default.
 
 ## Run on a PC
 
@@ -138,3 +101,21 @@ The latest release adds real public posts, developer groups, private messages, l
 - **Windows EXE workflow:** pushes to `main` now build and self-test the EXE on Windows; successful runs upload the raw `.exe` and its checksum to the stable `desktop-latest` prerelease (not a ZIP). A version tag `v2.6.*` also creates a versioned release.
 
 **Build status:** the Windows binary is only verified once the Windows GitHub Actions job succeeds and uploads its release assets. Source tests on Linux do not substitute for executing a Windows EXE.
+
+
+### v3 notification recovery and live collaboration
+
+- **Durable inbox:** notifications are written to SQLite and fetched again after
+  the browser reconnects, the user signs back in, or the server restarts.
+- `GET /api/notifications/inbox?after=0&limit=100` requires authentication,
+  supports cursor pagination, and returns `items`, `cursor`, `hasMore`, `unreadCount`.
+- **Private collaboration invitations** remain visible to the invited account
+  while unrelated private project activity remains protected.
+- **Live collaborative editor:** the adapted LuauForge editing surface provides
+  Luau syntax highlighting and line numbers, with authenticated SSE, member roles,
+  chat and revision-checked autosave. Streams automatically reconnect.
+- Browser device alerts are opt-in and only run while the tab is open. This is
+  not an out-of-browser push notification service. A fully offline backend
+  requires an external queue to accept events generated during its outage.
+- The originally proposed 41 v3 features are not all production-ready.
+  See `docs/RELEASE-v3.md` for implemented scope and remaining integrations.

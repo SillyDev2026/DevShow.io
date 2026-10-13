@@ -16,7 +16,7 @@ test('workspace navigation and API integration are connected',()=>{
 test('desktop build includes all source modules and changed release tag',()=>{
   assert.match(text('server/index.js'),/src\/v28\.js/);
   assert.match(text('tools/build-desktop.mjs'),/src\/v28\.js/);
-  assert.match(text('tools/desktop-entry.mjs'),/2\.8\.0/);
-  assert.match(text('.github/workflows/windows-exe.yml'),/tags: \['v2\.8\.\*'\]/);
+  assert.match(text('tools/desktop-entry.mjs'),/3\.0\.0/);
+  assert.match(text('.github/workflows/windows-exe.yml'),/tags: \['v3\.0\.\*'\]/);
   assert.match(text('.github/workflows/windows-exe.yml'),/DevShow-Desktop\.exe --self-test/);
 });

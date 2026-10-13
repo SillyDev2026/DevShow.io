@@ -54,7 +54,7 @@ export const toggle = (table,a,owner,b,id) => {
   else exec(`INSERT INTO ${table}(${a},${b}) VALUES(?,?)`,owner,id);
   return !old;
 };
-export const notify = (actor,recipient,kind,projectId='') => {if(actor!==recipient){const pref=one('SELECT settings FROM notification_preferences WHERE user_id=?',recipient);if(pref){try{const settings=JSON.parse(pref.settings);const category=kind==='message'?'messages':kind==='follow'?'follows':kind==='feedback'?'feedback':'projects';if(settings[category]===false)return;}catch{}}exec('INSERT INTO notifications(id,user_id,actor_id,kind,project_id) VALUES(?,?,?,?,?)',uuid(),recipient,actor,kind,projectId);publish('notification',{kind,projectId},recipient);}};
+export const notify = (actor,recipient,kind,projectId='') => {if(actor!==recipient){const pref=one('SELECT settings FROM notification_preferences WHERE user_id=?',recipient);if(pref){try{const settings=JSON.parse(pref.settings);const category=kind==='message'?'messages':kind==='follow'?'follows':kind==='feedback'?'feedback':'projects';if(settings[category]===false)return;}catch{}}const id=uuid();exec('INSERT INTO notifications(id,user_id,actor_id,kind,project_id) VALUES(?,?,?,?,?)',id,recipient,actor,kind,projectId);const cursor=one('SELECT rowid cursor FROM notifications WHERE id=?',id).cursor;publish('notification',{id,cursor,kind,projectId},recipient);}};
 export function makeRateLimiter(){
   const slots=new Map();
   return (req,mode='api')=>{

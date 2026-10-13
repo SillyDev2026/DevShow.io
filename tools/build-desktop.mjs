@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {build} from 'esbuild';
 
-const assets=['index.html','config.js','styles.css','styles-fluid.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js','src/v26.js','src/live.js','src/releases.js','src/v27.js','src/v28.js'];
+const assets=['index.html','config.js','styles.css','styles-fluid.css','assets/favicon.svg','src/main.js','src/api.js','src/components.js','src/views.js','src/v26.js','src/live.js','src/notification-inbox.js','src/releases.js','src/v27.js','src/v28.js','src/v30.js','src/editor/playground-luau.js','styles-v30.css'];
 for(const asset of assets){if(!fs.existsSync(asset))throw Error(`Missing desktop asset: ${asset}`);}
 fs.mkdirSync('dist',{recursive:true});
 await build({entryPoints:['tools/desktop-entry.mjs'],outfile:'dist/desktop-entry.cjs',bundle:true,platform:'node',target:'node26',format:'cjs',logLevel:'warning'});

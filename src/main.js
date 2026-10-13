@@ -1,3 +1,4 @@
+import {hydrateCollab,collabPage,stopCollab,handleCollabClick,handleCollabSubmit} from './v30.js';
 import {hydrateV28,handleV28Click,handleV28Submit,v28ProjectTools} from './v28.js';
 import {dashboardEditor,notificationEditor,teamEditor,syncEditor,suggestionsDialog,treeEditor} from './v27.js';
 import {hydrateRelease} from './releases.js';
@@ -6,15 +7,16 @@ import {esc,number,when,href,badge,avatar,empty} from './components.js';
 import {layout,allViews,modal,projectForm,profileForm,pages} from './views.js';
 import {projectExtras} from './v26.js';
 import {startLive,stopLive} from './live.js';
+import {syncNotifications} from './notification-inbox.js';
 
 const app=document.querySelector('#app');
 const savedView=(()=>{try{return localStorage.getItem('devshow-layout')==='list'?'list':'grid';}catch{return 'grid';}})();
-const state={view:savedView,page:'discover',query:'',category:'All',sort:'newest',projects:[],myProjects:[],creators:[],user:null,liked:[],saved:[],following:[],boards:[],notifications:[],updates:{},comments:{},stats:{developers:0,projects:0,comments:0},profile:null,boardId:null,connected:false,error:'',server:serverUrl(),posts:[],groups:[],groupId:null,groupPosts:[],conversations:[],peer:null,peerName:'',messages:[],dashboardWidgets:['projects','activity','notifications'],recentActivity:[],teams:[],launches:[],reputationLeaders:[],myReputation:null,notificationPrefs:null,syncState:null};
+const state={notificationUnreadCount:0,notificationInitialSync:false,view:savedView,page:'discover',query:'',category:'All',sort:'newest',projects:[],myProjects:[],creators:[],user:null,liked:[],saved:[],following:[],boards:[],notifications:[],updates:{},comments:{},stats:{developers:0,projects:0,comments:0},profile:null,boardId:null,connected:false,error:'',server:serverUrl(),posts:[],groups:[],groupId:null,groupPosts:[],conversations:[],peer:null,peerName:'',messages:[],dashboardWidgets:['projects','activity','notifications'],recentActivity:[],teams:[],launches:[],reputationLeaders:[],myReputation:null,notificationPrefs:null,syncState:null};
 let dialog='',dialogReturn=null,latestDetail=null,busy=false;
 const byId=id=>[...state.myProjects,...state.projects].find(p=>p.id===id);
 const notify=msg=>{const element=document.querySelector('#toast');if(element){element.textContent=msg;element.classList.add('show');setTimeout(()=>element.classList.remove('show'),3400);}document.querySelector('#live-status').textContent=msg;};
-const render=()=>{document.documentElement.dataset.theme='dark';app.innerHTML=layout(state,allViews(state));if(dialog)document.querySelector('#dialog-layer').innerHTML=dialog;if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());if(state.page==='workspace'&&state.connected)queueMicrotask(()=>hydrateV28(state.user,notify));};
-const content=()=>{const node=document.querySelector('#main-content');if(node)node.innerHTML=(state.error?`<div class="error-notice" role="alert">${esc(state.error)}</div>`:'')+allViews(state);if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());if(state.page==='workspace'&&state.connected)queueMicrotask(()=>hydrateV28(state.user,notify));};
+const render=()=>{document.documentElement.dataset.theme='dark';app.innerHTML=layout(state,allViews(state));if(dialog)document.querySelector('#dialog-layer').innerHTML=dialog;if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());if(state.page==='workspace'&&state.connected)queueMicrotask(()=>hydrateV28(state.user,notify));if(state.page==='collab'&&state.connected)queueMicrotask(()=>hydrateCollab(state.user,notify));};
+const content=()=>{const node=document.querySelector('#main-content');if(node)node.innerHTML=(state.error?`<div class="error-notice" role="alert">${esc(state.error)}</div>`:'')+allViews(state);if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());if(state.page==='workspace'&&state.connected)queueMicrotask(()=>hydrateV28(state.user,notify));if(state.page==='collab'&&state.connected)queueMicrotask(()=>hydrateCollab(state.user,notify));};
 const closeDialog=()=>{dialog='';const layer=document.querySelector('#dialog-layer');if(layer)layer.innerHTML='';document.body.classList.remove('dialog-open');dialogReturn?.focus?.();dialogReturn=null;};
 const show=(title,body)=>{dialogReturn=document.activeElement;dialog=modal(title,body);document.querySelector('#dialog-layer').innerHTML=dialog;document.body.classList.add('dialog-open');document.querySelector('#scrim .icon-button')?.focus();};
 const requireUser=()=>{if(state.user)return true;openAuth();notify('Sign in to use community features.');return false;};
@@ -37,8 +39,41 @@ async function refresh(silent=false){
     const data=await api('/bootstrap');
     Object.assign(state,{connected:true,error:'',projects:data.projects||[],myProjects:data.myProjects||[],creators:data.creators||[],user:data.user||null,liked:data.liked||[],saved:data.saved||[],following:data.following||[],boards:data.boards||[],notifications:data.notifications||[],updates:data.updates||{},comments:data.comments||{},server:serverUrl()});
     state.stats=await api('/stats').catch(()=>({developers:state.creators.length,projects:state.projects.length,comments:0}));
-    render();startLive(async()=>{if(!busy){await refresh(true);await loadFeature();content();}});
+    render();startLive(async(event)=>{
+      if(event.type==='ready'||event.type==='notification'){
+        await recoverNotifications().catch(e=>console.warn('Notification inbox:',e.message));
+      }
+      if(event.type!=='ready'&&!busy&&state.page!=='collab'){
+        await refresh(true);await loadFeature();content();
+      }
+    });
   }catch(e){state.connected=false;state.error=`Could not reach the DevShow API: ${e.message}`;if(!silent)notify(state.error);render();}
+}
+// Report queued notifications after sign-in or a reconnect, without marking them read.
+async function recoverNotifications(){
+  if(!state.user||!state.connected)return;
+  const userId=state.user.id;
+  await syncNotifications(userId,({items,unreadCount})=>{
+    if(state.user?.id!==userId)return;
+    const existing=new Map(state.notifications.map(n=>[n.id,n]));
+    for(const n of items)existing.set(n.id,n);
+    state.notifications=[...existing.values()].sort((a,b)=>(b.cursor||0)-(a.cursor||0)).slice(0,100);
+    const newlyUnread=items.filter(n=>!n.read).length;
+    const wasInitial=state.notificationInitialSync;
+    state.notificationInitialSync=true;
+    state.notificationUnreadCount=unreadCount;
+    if(newlyUnread>0){
+      notify(`${newlyUnread} unread notification${newlyUnread===1?'':'s'} ${wasInitial?'received':'waiting for you'}. Open Notifications to review.`);
+      // Permission must have been granted through the user-initiated settings button.
+      if(document.hidden&&typeof Notification!=='undefined'&&Notification.permission==='granted'){
+        const alert=new Notification('DevShow notifications',{body:`${unreadCount} unread notification${unreadCount===1?'':'s'} waiting.`,tag:'devshow-inbox'});
+        alert.onclick=()=>{window.focus();location.hash='dashboard';alert.close();};
+      }
+    }
+    // Keep the unread indicator current without closing a dialog during typing.
+    const indicator=document.querySelector('[data-action="notifications"]');
+    if(indicator)indicator.classList.toggle('has-unread',unreadCount>0);
+  });
 }
 const openAuth=()=>show('Join DevShow',`<div class="auth-intro"><div class="brand-symbol">{ }</div><h3>Your people are building here.</h3><p>Sign in or create an account to publish, follow and save.</p></div><div class="auth-tabs"><button data-action="auth-tab" data-value="login" class="active" id="tab-login">Sign in</button><button data-action="auth-tab" data-value="register" id="tab-register">Create account</button></div><form id="auth-form" class="form-stack"><input type="hidden" name="mode" value="login"><div id="register-fields" hidden><label class="field"><span>Display name</span><input name="name" autocomplete="name"></label><label class="field"><span>Username</span><input name="handle" autocomplete="username"></label></div><label class="field"><span>Email or username</span><input name="email" required autocomplete="username"></label><label class="field"><span>Password</span><input name="password" type="password" required minlength="10" autocomplete="current-password"></label><button class="button accent-btn full">Continue →</button><button type="button" class="button outline-btn full" data-action="github-auth">Sign in with GitHub ↗</button></form>`);
 function openProject(p){if(!requireUser())return;show(p?'Edit project':'Share your project',projectForm(p));}
@@ -63,6 +98,7 @@ async function openProfile(id){
   closeDialog();state.profile=u;state.page='profile';history.replaceState(null,'',`#profile-${encodeURIComponent(u.handle)}`);render();
 }
 async function route(){
+  if(state.page==='collab')stopCollab();
   const hash=decodeURIComponent(location.hash.slice(1)||'discover');
   if(hash.startsWith('github-ticket=')){const ticket=hash.slice(14);history.replaceState(null,'','#studio');try{const login=await api('/auth/github/exchange',{method:'POST',data:{ticket}});saveSession(login.token);await refresh(true);notify('GitHub connected successfully.');}catch(e){notify(e.message);}state.page='studio';render();return;}
   if(hash.startsWith('project-')){state.page='discover';render();if(state.connected)await openDetail(hash.slice(8));return;}
@@ -71,6 +107,7 @@ async function route(){
   closeDialog();await loadFeature();render();window.scrollTo(0,0);
 }
 const click=async e=>{
+  const v30=e.target.closest('[data-v30]');if(v30){await handleCollabClick(v30);return;}
   if(e.target.id==='scrim'){closeDialog();return;}
   const element=e.target.closest('[data-action]');if(!element)return;
   const action=element.dataset.action,id=element.dataset.id;
@@ -79,7 +116,7 @@ const click=async e=>{
     if(action==='close')closeDialog();
     else if(action==='focus-search'){const bar=document.querySelector('.topbar');bar?.classList.add('search-active');const field=document.querySelector('#global-search');field?.focus();field?.select();}
     else if(action==='dashboard-edit'){if(!requireUser())return;const d=await api('/v2/dashboard');show('Dashboard widgets',dashboardEditor(d.widgets));}
-    else if(action==='notice-settings'){if(!requireUser())return;const d=await api('/v2/notifications/preferences');show('Notification preferences',notificationEditor(d.preferences));}
+    else if(action==='notice-settings'){if(!requireUser())return;const d=await api('/v2/notifications/preferences');show('Notification preferences',notificationEditor(d.preferences)+(typeof Notification!=='undefined'?`<div class="detail-section"><p>Enable optional device alerts while DevShow is open in the background. Offline notifications are always saved to your inbox.</p><button type="button" class="button outline-btn" data-action="enable-device-notices">Enable device notifications</button></div>`:''));}
     else if(action==='sync-open'){if(!requireUser())return;state.syncState=await api('/v2/sync');show('Desktop and cloud draft sync',syncEditor(state.syncState));}
     else if(action==='sync-download'){if(!state.syncState)return;const blob=new Blob([JSON.stringify(state.syncState,null,2)],{type:'application/json'}),ref=URL.createObjectURL(blob);const a=document.createElement('a');a.href=ref;a.download='devshow-sync.json';a.click();URL.revokeObjectURL(ref);notify('Sync JSON downloaded.');}
     else if(action==='team-create'){if(requireUser())show('Create developer team',`<form id="v27-team-form" class="form-stack"><label class="field"><span>Team name</span><input name="name" minlength="3" required maxlength="65"></label><label class="field"><span>Description</span><textarea name="description" maxlength="320"></textarea></label><button class="button accent-btn">Create team</button></form>`);}
@@ -116,6 +153,10 @@ const click=async e=>{
     else if(action==='test-server'){const input=document.querySelector('#server-form [name="url"]');const status=document.querySelector('#server-health');if(status)status.textContent='Checking connection…';try{const result=await probeServer(input?.value?.trim()||serverUrl());if(status)status.textContent=`✓ API reachable · version ${result.version}`;}catch(e){if(status)status.textContent=`Connection failed: ${e.message}`;}}
     else if(action==='edit-profile'){if(requireUser())show('Edit your profile',profileForm(state.user,state.myProjects));}
     else if(action==='github-auth'){const result=await api('/auth/github/start');window.location.assign(result.url);}
+    else if(action==='enable-device-notices'){
+      if(typeof Notification==='undefined')notify('Browser notifications are unavailable on this device. Your inbox still works.');
+      else{const permission=await Notification.requestPermission();notify(permission==='granted'?'Device alerts enabled while DevShow is running.':'Device alerts were not enabled. Your inbox still works.');}
+    }
     else if(action==='logout'){stopLive();if(state.user)await api('/auth/logout',{method:'POST'}).catch(()=>{});clearSession();await refresh(true);notify('Signed out.');}
     else if(action==='like'||action==='bookmark'){
       if(!requireUser())return;await call(`/projects/${id}/${action}`);if(dialog&&latestDetail?.project.id===id)await openDetail(id);notify(action==='like'?'Reaction updated':'Saved projects updated');
@@ -162,6 +203,7 @@ const click=async e=>{
   }catch(err){notify(err.message);}
 };
 async function submitted(e){
+  if(e.target.id.startsWith('v30-')){e.preventDefault();await handleCollabSubmit(e.target);return;}
   const form=e.target;if(form.id.startsWith('v28-')){e.preventDefault();await handleV28Submit(form,{notify,show,closeDialog});return;}if(!['auth-form','import-form','project-form','profile-form','board-form','log-form','comment-form','server-form','password-form','feed-form','group-form','group-post-form','message-form','roadmap-form','feedback-form','status-form','code-form','media-form','v27-dashboard-form','v27-notice-form','v27-team-form','v27-invite-form','v27-link-project-form','v27-demo-form','v27-launch-form','v27-sync-form'].includes(form.id))return;
   e.preventDefault();if(busy)return;busy=true;const submit=form.querySelector('button[type="submit"],button:not([type])');if(submit)submit.disabled=true;
   const data=Object.fromEntries(new FormData(form));
@@ -182,7 +224,7 @@ async function submitted(e){
     else if(form.id==='media-form'){const file=form.querySelector('input[type="file"]')?.files?.[0];if(!file||file.size>1048576)throw Error('Choose an image no larger than 1 MB.');const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let offset=0;offset<bytes.length;offset+=16384)binary+=String.fromCharCode(...bytes.subarray(offset,offset+16384));const res=await api('/media',{method:'POST',data:{kind:data.kind,projectId:form.dataset.id||undefined,base64:btoa(binary)}});if(data.kind==='project'){const p=byId(form.dataset.id);await call(`/projects/${p.id}`,'PATCH',{...p,cover:serverUrl()+res.media.url});await openDetail(p.id);}else{const profileData={...state.user,[data.kind==='avatar'?'avatarId':'bannerId']:res.media.id};const result=await call('/me','PATCH',profileData);state.user=result.user;state.profile=result.user;closeDialog();render();}notify('Image uploaded.');}
     else if(form.id==='server-form'){const url=String(data.url||'').trim();if(url)await probeServer(url);stopLive();configureServer(url);await refresh();location.hash='discover';notify(url?'API verified and connected.':'Server override cleared.');}
     else if(form.id==='auth-form'){
-      const mode=data.mode;const result=await api(`/auth/${mode}`,{method:'POST',data});saveSession(result.token);closeDialog();await refresh();notify(mode==='register'?'Welcome to DevShow!':'Welcome back!');
+      const mode=data.mode;const result=await api(`/auth/${mode}`,{method:'POST',data});saveSession(result.token);state.notificationInitialSync=false;closeDialog();await refresh();notify(mode==='register'?'Welcome to DevShow!':'Welcome back!');
     }
     else if(form.id==='import-form'){const result=await api('/github/repository?url='+encodeURIComponent(data.url));const r=result.repository;const description=r.description||`Open-source repository ${r.fullName}, maintained on GitHub. Explore its code, issues and release history.`;openProject({title:r.name.slice(0,70),tagline:(r.description||`Open-source project by ${r.owner}`).slice(0,140),description:description.length>=20?description:`Repository ${r.fullName} shared by ${r.owner}.`,category:'Open Source',tags:[r.language,...r.topics].filter(Boolean).slice(0,6),repo:r.url,website:''});notify('Review the project before publishing.');}
     else if(form.id==='project-form'){
@@ -211,5 +253,7 @@ document.addEventListener('keydown',e=>{
   }
 });
 window.addEventListener('hashchange',()=>route().catch(e=>notify(e.message)));
+window.addEventListener('online',()=>refresh(true).catch(()=>{}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.user)recoverNotifications().catch(()=>{});});
 await refresh(true);
 await route();

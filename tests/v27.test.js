@@ -21,7 +21,7 @@ test('v2.7 migrations preserve core data and authentication',async()=>{
   b=await request('/auth/register','POST',{name:'Bob',email:'bob-v27@example.org',handle:'bob27',password:'valid_password_27b'});
   c=await request('/auth/register','POST',{name:'Carol',email:'carol-v27@example.org',handle:'carol27',password:'valid_password_27c'});
   assert.equal(a.status,201);assert.equal(b.status,201);assert.equal(c.status,201);
-  assert.equal((await request('/health')).version,'2.8.0');
+  assert.equal((await request('/health')).version,'3.0.0');
   id=(await request('/projects','POST',example,a.token)).project.id;
   hidden=(await request('/projects','POST',{...example,title:'Hidden',visibility:'private'},a.token)).project.id;
   const {query}=await import('../server/db.js');

@@ -1,3 +1,5 @@
+import {routeV30} from './v30.js';
+import {inbox,recentNotifications} from './notifications.js';
 import {routeV27} from './v27.js';
 import {routeV28} from './v28.js';
 import {routeCodeTree} from './v27-code.js';
@@ -15,13 +17,13 @@ const profile = id => publicUser(one('SELECT * FROM users WHERE id=?',id));
 const mine = user => projects({scope:'mine',owner:user.id,limit:300});
 function bootstrap(user) {
   const creators=query('SELECT * FROM users ORDER BY created_at DESC LIMIT 200').map(publicUser);
-  const data={version:'2.8.0',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
+  const data={version:'3.0.0',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
   if(user){
     data.liked=query("SELECT l.project_id FROM likes l JOIN projects p ON p.id=l.project_id WHERE l.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
     data.saved=query("SELECT b.project_id FROM bookmarks b JOIN projects p ON p.id=b.project_id WHERE b.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
     data.following=query('SELECT followed_id FROM follows WHERE follower_id=?',user.id).map(x=>x.followed_id);
     data.boards=query('SELECT * FROM collections WHERE owner_id=? ORDER BY created_at DESC',user.id).map(b=>({id:b.id,name:b.name,description:b.description,projects:query("SELECT cp.project_id FROM collection_projects cp JOIN projects p ON p.id=cp.project_id WHERE cp.collection_id=? AND (p.visibility!='private' OR p.creator_id=?)",b.id,user.id).map(x=>x.project_id)}));
-    data.notifications=query(`SELECT n.id,n.kind,n.project_id projectId,n.read,n.created_at createdAt,u.name actor FROM notifications n JOIN users u ON u.id=n.actor_id WHERE n.user_id=? AND (n.project_id IS NULL OR n.project_id='' OR EXISTS(SELECT 1 FROM projects p WHERE p.id=n.project_id AND (p.visibility!='private' OR p.creator_id=?))) ORDER BY n.created_at DESC LIMIT 60`,user.id,user.id);
+    data.notifications=recentNotifications(user.id,100);
   }
   const viewer=user?.id||'';
   for(const x of query("SELECT b.project_id,b.title,b.body,b.version,b.created_at FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public' OR p.creator_id=? ORDER BY b.created_at DESC LIMIT 400",viewer)) (data.updates[x.project_id]??=[]).push({title:x.title,body:x.body,version:x.version,date:x.created_at.slice(0,10)});
@@ -32,14 +34,15 @@ const ok=(send,data,status=200)=>send(status,data);
 const matchRoute=(path,re)=>re.exec(path);
 export async function routeApi(req,url,send,rate){
   const method=req.method,path=url.pathname,user=getUser(req);
-  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'2.8.0'});
+  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'3.0.0'});
+  if(await routeV30(req,url,send,rate,user))return;
   if(await routeV28(req,url,send,rate,user))return;
   if(method==='GET'&&path==='/api/auth/github/start'){rate(req,'auth');return ok(send,oauthStart(user));}
   if(method==='POST'&&path==='/api/auth/github/exchange'){rate(req,'auth');const d=await readJson(req);return ok(send,oauthExchange(d.ticket));}
   if(method==='POST'&&path==='/api/media'){rate(req,'write');return ok(send,{media:await uploadMedia(req,requiredUser(user))},201);}
   if(method==='GET'&&path==='/api/me/github-status'){requiredUser(user);return ok(send,{linked:githubLinked(user.id)});}
   if(method==='GET'&&path==='/api/bootstrap')return ok(send,bootstrap(user));
-  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'2.8.0',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
+  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'3.0.0',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
   if(method==='GET'&&path==='/api/github/repository'){rate(req,'github');return ok(send,{repository:await githubMetadata(url.searchParams.get('url'))});}
   if(method==='POST'&&path==='/api/auth/register'){
     rate(req,'auth');const d=await readJson(req),handle=clean(d.handle,24),name=clean(d.name,40),email=clean(d.email,254).toLowerCase(),password=String(d.password||'');
@@ -129,6 +132,11 @@ export async function routeApi(req,url,send,rate){
     requiredUser(user);const c=one('SELECT * FROM collections WHERE id=?',collection[1]);need(c,404,'Collection not found.');need(c.owner_id===user.id,403,'Not your collection.');
     if(method==='DELETE'&&!collection[2]){exec('DELETE FROM collections WHERE id=?',c.id);return ok(send,{ok:true});}
     if(method==='POST'&&collection[2]){const d=await readJson(req),p=permitted(projectRecord(d.projectId),user);return ok(send,{enabled:toggle('collection_projects','collection_id',c.id,'project_id',p.id)});}
+  }
+  if(method==='GET'&&path==='/api/notifications/inbox'){
+    requiredUser(user);
+    const after=Number(url.searchParams.get('after')||0),limit=Number(url.searchParams.get('limit')||50);
+    return ok(send,inbox(user.id,{after,limit}));
   }
   if(method==='POST'&&path==='/api/notifications'){requiredUser(user);exec('UPDATE notifications SET read=1 WHERE user_id=?',user.id);return ok(send,{ok:true});}
   if(await routeGitHub({req,url,send,rate,user}))return;

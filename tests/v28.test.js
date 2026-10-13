@@ -20,7 +20,7 @@ test('new routes preserve authentication and migrations',async()=>{
   alice=await request('/auth/register','POST',{name:'Alice',handle:'alice28',email:'alice28@example.org',password:'StrongPassword2028!'});
   bob=await request('/auth/register','POST',{name:'Bob',handle:'bob28',email:'bob28@example.org',password:'StrongPassword2028!'});
   assert.equal(alice.status,201);assert.equal(bob.status,201);
-  assert.equal((await request('/health')).version,'2.8.0');
+  assert.equal((await request('/health')).version,'3.0.0');
   id=(await request('/projects','POST',sample,alice.token)).project.id;
   privateId=(await request('/projects','POST',{...sample,title:'Private DevShow',visibility:'private'},alice.token)).project.id;
   unlistedId=(await request('/projects','POST',{...sample,title:'Unlisted DevShow',visibility:'unlisted'},alice.token)).project.id;

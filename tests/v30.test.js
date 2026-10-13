@@ -1,0 +1,77 @@
+import {test,after} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'devshow-v30-'));
+process.env.DB_PATH=path.join(dir,'test.sqlite');
+process.env.CORS_ORIGINS='https://sillydev2026.github.io';
+const {server}=await import('../server/index.js');
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const root=`http://127.0.0.1:${server.address().port}`;
+after(async()=>{await new Promise(resolve=>server.close(resolve));(await import('../server/db.js')).db.close();fs.rmSync(dir,{force:true,recursive:true});});
+const request=async(endpoint,method='GET',data,token)=>{const res=await fetch(root+'/api'+endpoint,{method,headers:{Origin:'https://sillydev2026.github.io',...(data?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:data?JSON.stringify(data):undefined});return {status:res.status,...await res.json().catch(()=>({}))};};
+const example={title:'Collaborative Luau Example',tagline:'Share source code securely',description:'A representative shared development project for verified real-time editing.',category:'Developer Tools',tags:['Luau'],visibility:'private'};
+let owner,friend,outsider,pid,file;
+test('v3 health and additive collaboration schema',async()=>{assert.equal((await request('/health')).version,'3.0.0');const {one}=await import('../server/db.js');for(const table of ['collaborative_documents','collaborative_members','collaborative_messages','collaborative_revisions'])assert.equal(one("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name=?",table).n,1);});
+test('register users and create a private project',async()=>{
+  owner=await request('/auth/register','POST',{name:'Owner',handle:'v30owner',email:'owner30@example.com',password:'very-long-password-A'});
+  friend=await request('/auth/register','POST',{name:'Friend',handle:'v30friend',email:'friend30@example.com',password:'very-long-password-B'});
+  outsider=await request('/auth/register','POST',{name:'Outsider',handle:'v30other',email:'other30@example.com',password:'very-long-password-C'});
+  assert.equal(owner.status,201);assert.equal(friend.status,201);assert.equal(outsider.status,201);
+  const p=await request('/projects','POST',example,owner.token);assert.equal(p.status,201);pid=p.project.id;
+  assert.equal((await request(`/v3/collab/projects/${pid}`, 'GET',undefined,outsider.token)).status,404);
+  assert.equal((await request('/v3/collab/projects','GET',undefined,friend.token)).projects.length,0);
+});
+test('only project owner can invite and invitation must be accepted',async()=>{
+  assert.equal((await request(`/v3/collab/projects/${pid}/invites`,'POST',{handle:'v30friend',role:'editor'},outsider.token)).status,404);
+  assert.equal((await request(`/v3/collab/projects/${pid}/invites`,'POST',{handle:'v30friend',role:'owner'},owner.token)).status,400);
+  const invited=await request(`/v3/collab/projects/${pid}/invites`,'POST',{handle:'v30friend',role:'editor'},owner.token);assert.equal(invited.status,200);
+  const invitations=await request('/v3/collab/invitations','GET',undefined,friend.token);assert.equal(invitations.invitations[0].projectId,pid);
+  assert.equal((await request(`/v3/collab/projects/${pid}`,'GET',undefined,friend.token)).status,404);
+  assert.equal((await request(`/v3/collab/invitations/${pid}`,'POST',{action:'accept'},friend.token)).status,200);
+  assert.equal((await request(`/v3/collab/projects/${pid}`,'GET',undefined,friend.token)).role,'editor');
+});
+test('collaborative Luau code supports revisions, conflicts and history',async()=>{
+  const added=await request(`/v3/collab/projects/${pid}/documents`,'POST',{path:'src/main.luau',language:'luau',content:'local a = 1'},owner.token);
+  assert.equal(added.status,201);file=added.document.id;
+  const rev=await request(`/v3/collab/projects/${pid}/documents/${file}`,'PUT',{baseRevision:0,content:'local a = 2'},friend.token);
+  assert.equal(rev.document.revision,1);assert.equal(rev.document.content,'local a = 2');
+  const stale=await request(`/v3/collab/projects/${pid}/documents/${file}`,'PUT',{baseRevision:0,content:'local b = 999'},owner.token);
+  assert.equal(stale.status,409);assert.equal(stale.current.content,'local a = 2');
+  const current=await request(`/v3/collab/projects/${pid}/documents/${file}`,'GET',undefined,owner.token);
+  assert.equal(current.document.content,'local a = 2');
+  const history=await request(`/v3/collab/projects/${pid}/documents/${file}/history`,'GET',undefined,owner.token);
+  assert.equal(history.history[0].revision,0);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents`,'POST',{path:'../hidden',language:'luau'},owner.token)).status,400);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents`,'POST',{path:'good.luau',language:'evil'},owner.token)).status,400);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents/${file}`,'GET',undefined,outsider.token)).status,404);
+});
+test('viewer can see real-time source and chat but cannot edit',async()=>{
+  const changed=await request(`/v3/collab/projects/${pid}/invites`,'POST',{handle:'v30friend',role:'viewer'},owner.token);
+  assert.equal(changed.status,200);
+  assert.equal((await request(`/v3/collab/projects/${pid}`,'GET',undefined,friend.token)).status,404);
+  await request(`/v3/collab/invitations/${pid}`,'POST',{action:'accept'},friend.token);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents/${file}`,'GET',undefined,friend.token)).document.content,'local a = 2');
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents/${file}`,'PUT',{baseRevision:1,content:'tamper'},friend.token)).status,403);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents`,'POST',{path:'bad.luau'},friend.token)).status,403);
+  assert.equal((await request(`/v3/collab/projects/${pid}/chat`,'POST',{message:'Looks good!'},friend.token)).status,201);
+  assert.equal((await request(`/v3/collab/projects/${pid}/chat`,'GET',undefined,owner.token)).messages.at(-1).content,'Looks good!');
+  assert.equal((await request(`/v3/collab/projects/${pid}/chat`,'GET',undefined,outsider.token)).status,404);
+});
+test('SSE events are authorized and announce revisions',async()=>{
+  assert.equal((await request(`/v3/collab/projects/${pid}/events`)).status,404);
+  const ctl=new AbortController();
+  const response=await fetch(root+`/api/v3/collab/projects/${pid}/events`,{headers:{Origin:'https://sillydev2026.github.io',Authorization:'Bearer '+owner.token},signal:ctl.signal});
+  assert.equal(response.status,200);assert.match(response.headers.get('content-type'),/text\/event-stream/);
+  const reader=response.body.getReader();let all='';const first=await reader.read();all+=new TextDecoder().decode(first.value);assert.match(all,/event: ready/);
+  const writer=await request(`/v3/collab/projects/${pid}/documents/${file}`,'PUT',{baseRevision:1,content:'local a = 3'},owner.token);
+  assert.equal(writer.status,200);
+  let found=all.includes('event: document');for(let i=0;i<5&&!found;i++){const chunk=await Promise.race([reader.read(),new Promise((_,reject)=>setTimeout(()=>reject(Error('SSE event timeout')),2000))]);all+=new TextDecoder().decode(chunk.value);found=all.includes('event: document');}assert.ok(found);
+  ctl.abort();await reader.cancel().catch(()=>{});
+});
+test('removing access prevents further reads',async()=>{
+  const removed=await request(`/v3/collab/projects/${pid}/members/${friend.user.id}`,'DELETE',undefined,owner.token);
+  assert.equal(removed.status,200);
+  assert.equal((await request(`/v3/collab/projects/${pid}/documents/${file}`,'GET',undefined,friend.token)).status,404);
+});

@@ -10,4 +10,4 @@ for(const name of ['project-form','profile-form','auth-form','comment-form','boa
 const api=fs.readFileSync('server/api.js','utf8');
 for(const route of ['api/bootstrap','api/auth/register','api/projects','api/collections','api/me/export','api/github/repository'])assert.ok(api.includes(route),`Missing route ${route}`);
 assert.ok(!client.includes('devshow-v2-local-first'),'Old browser-demo persistence should not return');
-console.log('DevShow v2.8.0 static smoke checks passed.');
+console.log('DevShow v3.0.0 static smoke checks passed.');
