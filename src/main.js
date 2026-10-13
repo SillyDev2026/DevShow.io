@@ -1,4 +1,5 @@
-import {api,serverUrl,configureServer,saveSession,clearSession,token} from './api.js';
+import {hydrateRelease} from './releases.js';
+import {api,serverUrl,configureServer,saveSession,clearSession,token,probeServer} from './api.js';
 import {esc,number,when,href,badge,avatar,empty} from './components.js';
 import {layout,allViews,modal,projectForm,profileForm,pages} from './views.js';
 import {projectExtras} from './v26.js';
@@ -10,8 +11,8 @@ const state={view:savedView,page:'discover',query:'',category:'All',sort:'newest
 let dialog='',dialogReturn=null,latestDetail=null,busy=false;
 const byId=id=>[...state.myProjects,...state.projects].find(p=>p.id===id);
 const notify=msg=>{const element=document.querySelector('#toast');if(element){element.textContent=msg;element.classList.add('show');setTimeout(()=>element.classList.remove('show'),3400);}document.querySelector('#live-status').textContent=msg;};
-const render=()=>{document.documentElement.dataset.theme='dark';app.innerHTML=layout(state,allViews(state));if(dialog)document.querySelector('#dialog-layer').innerHTML=dialog;};
-const content=()=>{const node=document.querySelector('#main-content');if(node)node.innerHTML=(state.error?`<div class="error-notice" role="alert">${esc(state.error)}</div>`:'')+allViews(state);};
+const render=()=>{document.documentElement.dataset.theme='dark';app.innerHTML=layout(state,allViews(state));if(dialog)document.querySelector('#dialog-layer').innerHTML=dialog;if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());};
+const content=()=>{const node=document.querySelector('#main-content');if(node)node.innerHTML=(state.error?`<div class="error-notice" role="alert">${esc(state.error)}</div>`:'')+allViews(state);if(state.page==='downloads')queueMicrotask(()=>hydrateRelease());};
 const closeDialog=()=>{dialog='';const layer=document.querySelector('#dialog-layer');if(layer)layer.innerHTML='';document.body.classList.remove('dialog-open');dialogReturn?.focus?.();dialogReturn=null;};
 const show=(title,body)=>{dialogReturn=document.activeElement;dialog=modal(title,body);document.querySelector('#dialog-layer').innerHTML=dialog;document.body.classList.add('dialog-open');document.querySelector('#scrim .icon-button')?.focus();};
 const requireUser=()=>{if(state.user)return true;openAuth();notify('Sign in to use community features.');return false;};
@@ -87,6 +88,8 @@ const click=async e=>{
     else if(action==='profile-self')await openProfile(state.user.id);
     else if(action==='category'){state.category=element.dataset.value;content();}
     else if(action==='retry')await refresh();
+    else if(action==='check-release')await hydrateRelease(true);
+    else if(action==='test-server'){const input=document.querySelector('#server-form [name="url"]');const status=document.querySelector('#server-health');if(status)status.textContent='Checking connection…';try{const result=await probeServer(input?.value?.trim()||serverUrl());if(status)status.textContent=`✓ API reachable · version ${result.version}`;}catch(e){if(status)status.textContent=`Connection failed: ${e.message}`;}}
     else if(action==='edit-profile'){if(requireUser())show('Edit your profile',profileForm(state.user,state.myProjects));}
     else if(action==='github-auth'){const result=await api('/auth/github/start');window.location.assign(result.url);}
     else if(action==='logout'){stopLive();if(state.user)await api('/auth/logout',{method:'POST'}).catch(()=>{});clearSession();await refresh(true);notify('Signed out.');}
@@ -145,7 +148,7 @@ async function submitted(e){
     else if(form.id==='status-form'){const id=form.dataset.id;await call(`/projects/${id}/${form.dataset.type}/${form.dataset.item}`,'PATCH',{status:data.status});await openDetail(id);notify('Status updated.');}
     else if(form.id==='code-form'){const d=await api(`/projects/${form.dataset.id}/github/code?path=${encodeURIComponent(data.path)}`);const preview=document.querySelector('#code-preview');if(preview)preview.innerHTML=`<h3>${esc(d.path)}</h3><pre class="source-preview"><code>${esc(d.content)}</code></pre>`;notify('File loaded.');}
     else if(form.id==='media-form'){const file=form.querySelector('input[type="file"]')?.files?.[0];if(!file||file.size>1048576)throw Error('Choose an image no larger than 1 MB.');const bytes=new Uint8Array(await file.arrayBuffer());let binary='';for(let offset=0;offset<bytes.length;offset+=16384)binary+=String.fromCharCode(...bytes.subarray(offset,offset+16384));const res=await api('/media',{method:'POST',data:{kind:data.kind,projectId:form.dataset.id||undefined,base64:btoa(binary)}});if(data.kind==='project'){const p=byId(form.dataset.id);await call(`/projects/${p.id}`,'PATCH',{...p,cover:serverUrl()+res.media.url});await openDetail(p.id);}else{const profileData={...state.user,[data.kind==='avatar'?'avatarId':'bannerId']:res.media.id};const result=await call('/me','PATCH',profileData);state.user=result.user;state.profile=result.user;closeDialog();render();}notify('Image uploaded.');}
-    else if(form.id==='server-form') {configureServer(data.url);await refresh();location.hash='discover';notify('Server configuration updated.');}
+    else if(form.id==='server-form'){const url=String(data.url||'').trim();if(url)await probeServer(url);stopLive();configureServer(url);await refresh();location.hash='discover';notify(url?'API verified and connected.':'Server override cleared.');}
     else if(form.id==='auth-form'){
       const mode=data.mode;const result=await api(`/auth/${mode}`,{method:'POST',data});saveSession(result.token);closeDialog();await refresh();notify(mode==='register'?'Welcome to DevShow!':'Welcome back!');
     }

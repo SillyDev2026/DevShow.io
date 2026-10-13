@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {selectExe,getDesktopRelease} from '../src/releases.js';
+import {probeServer} from '../src/api.js';
+const url='https://github.com/SillyDev2026/DevShow.io/releases/download/desktop-latest/DevShow-Desktop.exe';
+const release={tag_name:'desktop-latest',assets:[{name:'DevShow-Desktop.exe',state:'uploaded',size:44000000,browser_download_url:url}]};
+test('release selection rejects stale or fake downloads',()=>{assert.equal(selectExe(release).url,url);assert.equal(selectExe({...release,tag_name:'v2.2.0'}),null);assert.equal(selectExe({...release,assets:[{...release.assets[0],size:20}]}),null);assert.equal(selectExe({...release,assets:[{...release.assets[0],browser_download_url:'https://example.org/bad.exe'}]}),null);});
+test('missing GitHub release never produces a download link',async()=>{assert.equal(await getDesktopRelease(async()=>({status:404})),null);await assert.rejects(getDesktopRelease(async()=>({status:403,ok:false})),/403/);});
+test('connection checks API identity before configuration',async()=>{const ok=await probeServer('https://api.example.org',async()=>({ok:true,json:async()=>({ok:true,service:'DevShow API',version:'2.6.1'})}));assert.equal(ok.version,'2.6.1');await assert.rejects(probeServer('http://example.org'),/HTTPS/);});
+test('desktop entry, routes and release workflow are wired',()=>{assert.match(readFileSync('server/index.js','utf8'),/src\/releases\.js/);assert.match(readFileSync('tools/build-desktop.mjs','utf8'),/src\/releases\.js/);assert.match(readFileSync('src/views.js','utf8'),/id="windows-release"/);assert.match(readFileSync('.github/workflows/windows-exe.yml','utf8'),/branches: \[main\]/);assert.match(readFileSync('tools/desktop-entry.mjs','utf8'),/EADDRINUSE/);});

@@ -225,3 +225,12 @@ p { overflow-wrap: anywhere; }
 @media(max-width:47rem){.message-layout{grid-template-columns:minmax(0,1fr)}.message-thread{max-height:42dvh}.v26-banner{aspect-ratio:2.2/1}}
 
 .portfolio-list .project-grid{grid-template-columns:minmax(0,1fr)}.portfolio-featured .project-grid>:first-child{grid-column:1/-1}.sidebar{overflow-y:auto;scrollbar-width:thin}.sidebar nav{flex-shrink:0}
+
+/* v2.6.1: fluid download, help and connection controls. */
+.release-download{display:flex;flex-wrap:wrap;flex-direction:column;align-items:flex-start;gap:.75rem;margin:1.3rem 0 1rem;min-height:3.5rem}
+.release-download p{max-width:52ch;margin:0}
+.release-download .link{color:var(--lime);text-decoration:underline}
+.download-help{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:clamp(.75rem,2vw,1.5rem);margin-block:clamp(1rem,3vw,2.5rem)}
+.download-help>div{padding:clamp(1rem,2vw,1.5rem);background:var(--panel);border:1px solid var(--edge);border-radius:1rem}
+.download-help h3{margin:0 0 .5rem}.download-help p{color:var(--muted)}#server-health{overflow-wrap:anywhere}
+@media(max-width:44rem){.release-download .button{width:100%;white-space:normal;text-align:center}}

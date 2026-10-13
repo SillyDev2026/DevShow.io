@@ -1,10 +1,14 @@
-name: DevShow Windows executable
+name: DevShow Windows EXE
 on:
   workflow_dispatch:
   push:
-    tags: ['v2.5.*']
+    branches: [main]
+    tags: ['v2.6.*']
 permissions:
   contents: write
+concurrency:
+  group: devshow-windows-exe
+  cancel-in-progress: false
 jobs:
   windows:
     runs-on: windows-latest
@@ -17,19 +21,48 @@ jobs:
       - run: npm test
       - run: npm run test:desktop
         env:
-          DB_PATH: ${{ runner.temp }}\devshow-verify.sqlite
+          DB_PATH: ${{ runner.temp }}\devshow-check.sqlite
       - run: node --build-sea dist/sea-config.json
-      - name: Verify standalone EXE
+      - name: Verify standalone EXE and checksum
         shell: pwsh
         run: |
-          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-exe-selftest.sqlite'
+          $ErrorActionPreference = 'Stop'
+          $env:DB_PATH = Join-Path $env:RUNNER_TEMP 'devshow-exe-check.sqlite'
           & .\dist\DevShow-Desktop.exe --self-test
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($LASTEXITCODE -ne 0) { throw 'Standalone EXE self-test failed.' }
           if ((Get-Item .\dist\DevShow-Desktop.exe).Length -lt 1000000) { throw 'Executable unusually small.' }
-      - name: Publish direct executable
-        if: startsWith(github.ref, 'refs/tags/v2.5.')
+          $sha = (Get-FileHash .\dist\DevShow-Desktop.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$sha  DevShow-Desktop.exe" | Set-Content -Encoding ascii .\dist\DevShow-Desktop.exe.sha256
+          & .\dist\DevShow-Desktop.exe --version
+          if ($LASTEXITCODE -ne 0) { throw 'Executable version check failed.' }
+      - name: Publish latest desktop download
+        if: startsWith(github.ref, 'refs/heads/')
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create '${{ github.ref_name }}' '.\dist\DevShow-Desktop.exe' --repo '${{ github.repository }}' --title 'DevShow ${{ github.ref_name }} Desktop' --notes 'Standalone Windows desktop companion with private SQLite storage.'
+          $ErrorActionPreference = 'Stop'
+          $tag = 'desktop-latest'
+          gh release view $tag --repo '${{ github.repository }}' 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --target '${{ github.sha }}' --repo '${{ github.repository }}' --title 'DevShow Desktop (latest verified)' --notes 'Verified standalone Windows EXE, with local SQLite saving.' --prerelease
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create desktop release.' }
+          }
+          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 --clobber --repo '${{ github.repository }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not upload executable.' }
+          gh release edit $tag --repo '${{ github.repository }}' --notes 'Verified source commit: ${{ github.sha }}. Standalone Windows executable with local SQLite saving.'
+      - name: Publish versioned release
+        if: startsWith(github.ref, 'refs/tags/v2.6.')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = '${{ github.ref_name }}'
+          gh release view $tag --repo '${{ github.repository }}' 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo '${{ github.repository }}' --title "DevShow $tag Desktop" --notes 'Standalone Windows application, local SQLite storage.'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create versioned release.' }
+          }
+          gh release upload $tag .\dist\DevShow-Desktop.exe .\dist\DevShow-Desktop.exe.sha256 --clobber --repo '${{ github.repository }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not upload executable.' }

@@ -17,6 +17,19 @@ export function configureServer(url){
   if(text)localStorage.setItem(STORAGE,text);else localStorage.removeItem(STORAGE);
   clearSession();
 }
+export async function probeServer(origin,fetcher=fetch,timeout=6000){
+  const url=String(origin||'').trim().replace(/\/+$/,'');
+  if(!validServerUrl(url))throw Error('Enter a valid HTTPS server origin (or HTTP localhost).');
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeout);
+  try{
+    const response=await fetcher(`${url}/api/health`,{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'});
+    if(!response.ok)throw Error(`Health check failed (${response.status})`);
+    const payload=await response.json();
+    if(payload?.ok!==true||payload?.service!=='DevShow API'||typeof payload.version!=='string')throw Error('This server is not a compatible DevShow API.');
+    return {version:payload.version,origin:url};
+  }catch(e){if(e.name==='AbortError')throw Error('Connection timed out. Verify the API address and server status.');throw e;}
+  finally{clearTimeout(timer);}
+}
 export const token=()=>sessionStorage.getItem(SESSION)||'';
 export const saveSession=value=>value?sessionStorage.setItem(SESSION,value):sessionStorage.removeItem(SESSION);
 export const clearSession=()=>sessionStorage.removeItem(SESSION);

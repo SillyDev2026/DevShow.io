@@ -1,4 +1,4 @@
-# DevShow.io · v2.6
+# DevShow.io · v2.6.1
 
 **Discover creative projects. Share open-source software. Follow builders.**
 
@@ -104,3 +104,12 @@ The latest release adds real public posts, developer groups, private messages, l
 - GitHub OAuth, worldwide synchronization and persistent images require a deployed Node server, durable volume and the environment variables described above. GitHub Pages alone cannot host the backend.
 - Uploads are limited to 1 MB PNG/JPEG/WebP; project privacy and message ownership are enforced on the server. SSE is single-process and intended as a lightweight notification channel, not a multiplayer editor.
 - Windows packaging is retained but requires the GitHub Windows workflow to generate a current `.exe`; the executable is **not** part of this source archive.
+
+## v2.6.1 — Desktop reliability and quality of life
+
+- The Windows workflow builds from main and from v2.6.* tags, runs the EXE self-test and publishes the raw executable and SHA-256 checksum to the `desktop-latest` prerelease.
+- The Download app page checks actual GitHub release assets before offering a direct .exe download.
+- Desktop automatically chooses a free localhost port if 3217 is busy; supports --version, --self-test and --no-browser.
+- The API connection setting now checks /api/health before switching servers. Existing saved server values remain on failed checks.
+
+Windows binaries remain unverified until the Windows Actions run completes successfully. Public multi-user sync requires a separately hosted HTTPS API.

@@ -11,7 +11,7 @@ const profile = id => publicUser(one('SELECT * FROM users WHERE id=?',id));
 const mine = user => projects({scope:'mine',owner:user.id,limit:300});
 function bootstrap(user) {
   const creators=query('SELECT * FROM users ORDER BY created_at DESC LIMIT 200').map(publicUser);
-  const data={version:'2.6.0',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
+  const data={version:'2.6.1',projects:projects({limit:150}),myProjects:user?mine(user):[],creators,user:user?publicUser(user):null,liked:[],saved:[],following:[],boards:[],comments:{},updates:{},notifications:[]};
   if(user){
     data.liked=query("SELECT l.project_id FROM likes l JOIN projects p ON p.id=l.project_id WHERE l.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
     data.saved=query("SELECT b.project_id FROM bookmarks b JOIN projects p ON p.id=b.project_id WHERE b.user_id=? AND (p.visibility!='private' OR p.creator_id=?)",user.id,user.id).map(x=>x.project_id);
@@ -28,13 +28,13 @@ const ok=(send,data,status=200)=>send(status,data);
 const matchRoute=(path,re)=>re.exec(path);
 export async function routeApi(req,url,send,rate){
   const method=req.method,path=url.pathname,user=getUser(req);
-  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'2.6.0'});
+  if(method==='GET'&&path==='/api/health')return ok(send,{ok:true,service:'DevShow API',version:'2.6.1'});
   if(method==='GET'&&path==='/api/auth/github/start'){rate(req,'auth');return ok(send,oauthStart(user));}
   if(method==='POST'&&path==='/api/auth/github/exchange'){rate(req,'auth');const d=await readJson(req);return ok(send,oauthExchange(d.ticket));}
   if(method==='POST'&&path==='/api/media'){rate(req,'write');return ok(send,{media:await uploadMedia(req,requiredUser(user))},201);}
   if(method==='GET'&&path==='/api/me/github-status'){requiredUser(user);return ok(send,{linked:githubLinked(user.id)});}
   if(method==='GET'&&path==='/api/bootstrap')return ok(send,bootstrap(user));
-  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'2.6.0',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
+  if(method==='GET'&&path==='/api/stats')return ok(send,{version:'2.6.1',developers:one('SELECT COUNT(*) n FROM users').n,projects:one("SELECT COUNT(*) n FROM projects WHERE visibility='public'").n,comments:one("SELECT COUNT(*) n FROM comments c JOIN projects p ON p.id=c.project_id WHERE p.visibility='public'").n,updates:one("SELECT COUNT(*) n FROM build_logs b JOIN projects p ON p.id=b.project_id WHERE p.visibility='public'").n});
   if(method==='GET'&&path==='/api/github/repository'){rate(req,'github');return ok(send,{repository:await githubMetadata(url.searchParams.get('url'))});}
   if(method==='POST'&&path==='/api/auth/register'){
     rate(req,'auth');const d=await readJson(req),handle=clean(d.handle,24),name=clean(d.name,40),email=clean(d.email,254).toLowerCase(),password=String(d.password||'');

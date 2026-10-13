@@ -21,7 +21,7 @@ test('v2.6 register accounts and schema migrations',async()=>{
   reader=await request('/auth/register','POST',{name:'Grace',handle:'gracedev',email:'grace@example.org',password:'test-good-password-123'});
   outsider=await request('/auth/register','POST',{name:'Lin',handle:'lindev',email:'lin@example.org',password:'test-good-password-123'});
   assert.equal(owner.status,201);assert.equal(reader.status,201);assert.equal(outsider.status,201);
-  assert.equal((await request('/health')).version,'2.6.0');
+  assert.equal((await request('/health')).version,'2.6.1');
   assert.equal((await request('/auth/github/start')).status,503);
   const schema=await import('../server/db.js');
   assert.ok(schema.query('PRAGMA table_info(users)').some(c=>c.name==='banner_media_id'));
