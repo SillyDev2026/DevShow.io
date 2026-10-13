@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ['v2.7.*']
+    tags: ['v2.8.*']
 permissions:
   contents: write
 concurrency:
@@ -52,7 +52,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload Windows executable.' }
           gh release edit $tag --repo '${{ github.repository }}' --notes "Verified source commit: ${{ github.sha }}. Standalone Windows executable with local SQLite storage."
       - name: Publish versioned desktop release
-        if: startsWith(github.ref, 'refs/tags/v2.7.')
+        if: startsWith(github.ref, 'refs/tags/v2.8.')
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

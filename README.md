@@ -1,14 +1,21 @@
-# DevShow.io · v2.7.0
+# DevShow.io · v2.8.0
 
 **Discover creative projects. Share open-source software. Follow builders.**
 
 [Website](https://sillydev2026.github.io/DevShow.io/) · [Source](https://github.com/SillyDev2026/DevShow.io) · [Windows downloads](https://github.com/SillyDev2026/DevShow.io/releases)
 
-## DevShow v2.7 — Developer teams, projects and releases
+## DevShow v2.8 — Creator workspace, privacy and discovery
 
 This is a **Node.js 22.13+ / SQLite** project with a browser frontend hosted on GitHub Pages. The public website needs a separately hosted HTTPS Node.js API with persistent SQLite data; **the Windows EXE operates locally unless the user explicitly connects a public API.** Existing user and project data is preserved with additive schema migrations.
 
-### New in v2.7
+
+## v2.8 new workspace
+
+DevShow now includes a fluid **Workspace 2.8** page with server-side filtered discovery, owner-only project checklists, public release milestones, development stages, developer safety controls, and personal Studio analytics. These are implemented as additive SQLite tables and v3 endpoints; see [the 30-item implementation checklist](docs/RELEASE-v2.8.md). Existing v2.7 functionality remains.
+
+**EXE:** the source contains the revised Node 26 Windows SEA build workflow. The actual Windows executable is produced and verified by GitHub Actions after publication; the source archive is not an EXE. Public sharing still needs an independently hosted HTTPS Node API with durable disk.
+
+### Existing v2.7 features
 
 - Live public project activity from project publishing and build updates, backed by single-process SSE.
 - Sandboxed HTTPS interactive demo embeds and a directory/file GitHub code explorer.
@@ -58,7 +65,7 @@ npm run test:desktop
 node --build-sea dist/sea-config.json
 ```
 
-A passing workflow on a `v2.5.*` Git tag attaches `DevShow-Desktop.exe` directly to GitHub Releases. **The source repository and Windows build workflow do not by themselves mean the executable is available.**
+A passing workflow on a `v2.8.*` Git tag attaches `DevShow-Desktop.exe` directly to GitHub Releases. **The source repository and Windows build workflow do not by themselves mean the executable is available.**
 
 ## Public hosting without Cloudflare
 

@@ -42,7 +42,7 @@ test('website, Windows builder and release workflow are consistent',()=>{
   assert.match(build,/src\/releases\.js/);
   assert.match(readFileSync('server/index.js','utf8'),/src\/releases\.js/);
   assert.match(workflow,/branches: \[main\]/);
-  assert.match(workflow,/tags: \['v2\.7\.\*'\]/);
+  assert.match(workflow,/tags: \['v2\.8\.\*'\]/);
   assert.match(workflow,/DevShow-Desktop\.exe\.sha256/);
   assert.match(workflow,/--self-test/);
   assert.match(readFileSync('tools/desktop-entry.mjs','utf8'),/EADDRINUSE/);

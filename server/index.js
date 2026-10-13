@@ -6,6 +6,7 @@ import * as sea from 'node:sea';
 import './db.js';
 import './features-db.js';
 import './v27-db.js';
+import './v28-db.js';
 import {routeApi} from './api.js';
 import {makeRateLimiter,error,getUser} from './security.js';
 import {readMedia} from './media.js';
@@ -15,7 +16,7 @@ import {oauthCallback} from './oauth.js';
 const ROOT=process.env.DEVSHOW_ROOT||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const PORT=Number(process.env.PORT||3000);
 const ALLOWED=(process.env.CORS_ORIGINS||'https://sillydev2026.github.io,http://localhost:3000,http://127.0.0.1:3000,http://localhost:3217,http://127.0.0.1:3217').split(',').map(x=>x.trim()).filter(Boolean);
-const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js','/src/v27.js':'src/v27.js'};
+const ASSETS={'/':'index.html','/index.html':'index.html','/styles.css':'styles.css','/styles-fluid.css':'styles-fluid.css','/config.js':'config.js','/assets/favicon.svg':'assets/favicon.svg','/src/main.js':'src/main.js','/src/api.js':'src/api.js','/src/components.js':'src/components.js','/src/views.js':'src/views.js','/src/v26.js':'src/v26.js','/src/live.js':'src/live.js','/src/releases.js':'src/releases.js','/src/v27.js':'src/v27.js','/src/v28.js':'src/v28.js','/src/v28.js':'src/v28.js'};
 const TYPES={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml'};
 const rate=makeRateLimiter();
 const send=(res,status,data)=>{const payload=JSON.stringify(data);res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(payload);};
@@ -51,4 +52,4 @@ async function handler(req,res){
   }catch(e){if(!e.status)console.error('DevShow:',e);if(!res.headersSent)send(res,e.status||500,{error:e.status?e.message:'Internal server error.'});else res.end();}
 }
 export const server=http.createServer(handler);
-if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v2.7.0 at http://localhost:${PORT}`));
+if(!process.env.DEVSHOW_DESKTOP&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))server.listen(PORT,'0.0.0.0',()=>console.log(`DevShow v2.8.0 at http://localhost:${PORT}`));

@@ -4,7 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import {execFile} from 'node:child_process';
 
-const VERSION='2.7.0';
+const VERSION='2.8.0';
 if(process.argv.includes('--version')){
   console.log(`DevShow Desktop ${VERSION}`);
 }else{
