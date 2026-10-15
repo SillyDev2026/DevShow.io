@@ -1,4 +1,4 @@
-import {test,after} from 'node:test';
+import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -49,7 +49,9 @@ await import('../server/v30-db.js');
 const {inbox}=await import('../server/notifications.js');
 const {projects}=await import('../server/projects.js');
 const {routeV28}=await import('../server/v28.js');
-after(()=>{db.close();fs.rmSync(folder,{recursive:true,force:true});});
+// Keep the shared fixture open for asynchronous tests on Node 26/Windows.
+// The test-worker exit runs only after all assertions have completed.
+process.once('exit',()=>{try{db.close();}catch{}try{fs.rmSync(folder,{recursive:true,force:true});}catch{}});
 const user=randomUUID();
 exec('INSERT INTO users(id,email,handle,password_hash,name) VALUES(?,?,?,?,?)',user,'literal@example.com','literal_dev','testhash','Literal Developer');
 const data=[
