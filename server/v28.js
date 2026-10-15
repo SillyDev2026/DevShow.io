@@ -26,7 +26,7 @@ export async function routeV28(req,url,send,rate,user){
     need(!category||CATEGORIES.includes(category),400,'Invalid category.');
     const where = ["p.visibility='public'"],args = [];
     if(user) {where.push('NOT EXISTS(SELECT 1 FROM user_blocks ub WHERE ub.blocker_id=? AND ub.blocked_id=p.creator_id)');args.push(user.id);}
-    if(q){where.push('(p.title LIKE ? OR p.tagline LIKE ? OR p.description LIKE ?)');const text='%'+q.replaceAll('\\','\\\\').replaceAll('%','\\%').replaceAll('_','\\_')+'%';args.push(text,text,text);}
+    if(q){where.push("(p.title LIKE ? ESCAPE '\\' OR p.tagline LIKE ? ESCAPE '\\' OR p.description LIKE ? ESCAPE '\\')");const text='%'+q.replaceAll('\\','\\\\').replaceAll('%','\\%').replaceAll('_','\\_')+'%';args.push(text,text,text);}
     if(category){where.push('p.category=?');args.push(category);}
     if(tag){where.push('EXISTS(SELECT 1 FROM json_each(p.tags) jt WHERE lower(jt.value)=lower(?))');args.push(tag);}
     const joined = where.join(' AND ');
@@ -135,6 +135,6 @@ export async function routeV28(req,url,send,rate,user){
   }
   const notification = path.match(/^\/api\/v3\/notifications\/([a-f0-9-]{36})\/read$/);
   if(notification&&method==='POST'){requiredUser(user);rate(req,'write');need(exec('UPDATE notifications SET read=1 WHERE id=? AND user_id=?',notification[1],user.id).changes,404,'Notification not found.');return ok(send,{ok:true});}
-  if(path==='/api/v3/desktop/status'&&method==='GET')return ok(send,{version:'2.8.0',desktop:process.env.DEVSHOW_DESKTOP==='1',cloudConfigured:!!process.env.PUBLIC_BASE_URL,features:{localSaving:true,manualSync:true,automaticTwoWaySync:false},time:new Date().toISOString()});
+  if(path==='/api/v3/desktop/status'&&method==='GET')return ok(send,{version:'3.0.1',desktop:process.env.DEVSHOW_DESKTOP==='1',cloudConfigured:!!process.env.PUBLIC_BASE_URL,features:{localSaving:true,manualSync:true,automaticTwoWaySync:false},time:new Date().toISOString()});
   return false;
 }

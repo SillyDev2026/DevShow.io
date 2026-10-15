@@ -8,13 +8,17 @@ import {error} from './security.js';
 const visible=`(n.project_id IS NULL OR n.project_id='' OR EXISTS (
   SELECT 1 FROM projects p WHERE p.id=n.project_id AND (
     p.visibility IN ('public','unlisted') OR p.creator_id=? OR
+    EXISTS (
+      SELECT 1 FROM collaborative_members active WHERE active.project_id=p.id
+      AND active.user_id=? AND active.state='active'
+    ) OR
     (n.kind='collaboration' AND EXISTS (
-      SELECT 1 FROM collaborative_members m WHERE m.project_id=p.id
-      AND m.user_id=? AND m.state IN ('pending','active')
+      SELECT 1 FROM collaborative_members pending WHERE pending.project_id=p.id
+      AND pending.user_id=? AND pending.state='pending'
     ))
   )
 ))`;
-const bind=(userId)=>[userId,userId,userId];
+const bind=(userId)=>[userId,userId,userId,userId];
 export function inbox(userId,{after=0,limit=50}={}){
   if(!Number.isSafeInteger(after)||after<0)throw error(400,'Invalid notification cursor.');
   if(!Number.isSafeInteger(limit)||limit<1||limit>100)throw error(400,'Notification limit must be 1–100.');
@@ -22,7 +26,7 @@ export function inbox(userId,{after=0,limit=50}={}){
       n.created_at createdAt,u.name actor,u.handle actorHandle
     FROM notifications n JOIN users u ON u.id=n.actor_id
     WHERE n.user_id=? AND n.rowid>? AND ${visible}
-    ORDER BY n.rowid ASC LIMIT ?`,userId,after,userId,userId,limit+1);
+    ORDER BY n.rowid ASC LIMIT ?`,userId,after,userId,userId,userId,limit+1);
   const hasMore=rows.length>limit;
   const items=rows.slice(0,limit);
   const unreadCount=one(`SELECT COUNT(*) n FROM notifications n
@@ -34,6 +38,6 @@ export function recentNotifications(userId,limit=100){
       n.created_at createdAt,u.name actor,u.handle actorHandle
     FROM notifications n JOIN users u ON u.id=n.actor_id
     WHERE n.user_id=? AND ${visible}
-    ORDER BY n.rowid DESC LIMIT ?`,userId,userId,userId,limit);
+    ORDER BY n.rowid DESC LIMIT ?`,userId,userId,userId,userId,limit);
 }
 export function latestCursor(userId){return one('SELECT COALESCE(MAX(rowid),0) cursor FROM notifications WHERE user_id=?',userId).cursor;}

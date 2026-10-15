@@ -12,7 +12,7 @@ export function projects({scope='public',owner='',q='',category='',sort='newest'
   if(scope==='mine'){where.push('p.creator_id=?');args.push(owner);}
   else{where.push("p.visibility='public'");if(scope==='profile'){where.push('p.creator_id=?');args.push(owner);}}
   if(category&&CATEGORIES.includes(category)){where.push('p.category=?');args.push(category);}
-  if(q){where.push('(p.title LIKE ? OR p.tagline LIKE ? OR p.description LIKE ? OR p.tags LIKE ?)');const x=`%${clean(q,80).replaceAll('%','\\%').replaceAll('_','\\_')}%`;args.push(x,x,x,x);}
+  if(q){where.push("(p.title LIKE ? ESCAPE '\\' OR p.tagline LIKE ? ESCAPE '\\' OR p.description LIKE ? ESCAPE '\\' OR p.tags LIKE ? ESCAPE '\\')");const x=`%${clean(q,80).replaceAll('\\','\\\\').replaceAll('%','\\%').replaceAll('_','\\_')}%`;args.push(x,x,x,x);}
   const order=sort==='liked'?'likes DESC, p.created_at DESC':sort==='oldest'?'p.created_at ASC':sort==='popular'?'(p.views+likes*6) DESC,p.created_at DESC':'p.created_at DESC';
   return query(`${BASE} WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ?`,...args,Math.max(1,Math.min(300,Number(limit)||100))).map(projectRow);
 }
