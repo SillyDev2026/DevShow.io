@@ -35,12 +35,28 @@ async function handleEvent(type,data){if(!state.projectId||!byId('v30-root'))ret
   if(type==='ready'||type==='presence'){state.online=data.online||0;status();if(type==='ready'){const rejoined=state.joinedOnce;state.joinedOnce=true;state.retryCount=0;if(rejoined&&!state.dirty)await refreshData().catch(e=>notice(e.message,true));}return;}
   if(type==='message'){state.chat.push({handle:data.handle,content:data.message});state.chat=state.chat.slice(-80);const box=byId('v30-chat');if(box)box.innerHTML=messagesHtml();return;}
   if(type==='document'||type==='member'){
+    if(type==='document'&&data.action==='delete'&&state.documentId===data.id){
+      if(state.dirty){backupLocal();state.conflict=true;notice('Another developer deleted this file. Your unsaved text is retained in the device draft; copy it before leaving.',true);status();return;}
+      state.fileRequest++;state.document=null;state.documentId='';state.localDraft=null;state.conflict=false;
+      await refreshData().catch(e=>notice(e.message,true));
+      notice('The open file was deleted by a collaborator. Select another file.',true);return;
+    }
     if(type==='document'&&data.action==='update'&&state.documentId===data.id&&state.saving&&data.by===state.userHandle)return;
     if(type==='document'&&data.action==='update'&&state.documentId===data.id&&state.dirty){state.conflict=true;notice('A collaborator saved a new revision. Your local changes remain untouched.',true);status();return;}
     await refreshData().catch(e=>notice(e.message,true));
   }
 }
-async function watch(pid){const ctl=new AbortController();state.stream=ctl;try{const res=await fetch(`${serverUrl()}/api${base}/projects/${pid}/events`,{headers:{Accept:'text/event-stream',Authorization:`Bearer ${token()}`},signal:ctl.signal,cache:'no-store'});if(!res.ok)throw Error('Live editor connection denied ('+res.status+').');const reader=res.body.getReader(),decoder=new TextDecoder();let buffer='';while(!ctl.signal.aborted){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});if(buffer.length>200000)throw Error('Live event stream exceeded size limit.');let end;while((end=buffer.indexOf('\n\n'))!==-1){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);let type='message',data='';for(const line of block.split('\n')){if(line.startsWith('event:'))type=line.slice(6).trim();if(line.startsWith('data:'))data+=line.slice(5).trim();}if(data&&state.stream===ctl&&state.projectId===pid&&!ctl.signal.aborted)await handleEvent(type,JSON.parse(data));}}}catch(e){if(!ctl.signal.aborted)notice(`Live connection interrupted: ${e.message}. Reconnecting automatically.`,true);}
+async function watch(pid){const ctl=new AbortController();state.stream=ctl;try{const res=await fetch(`${serverUrl()}/api${base}/projects/${pid}/events`,{headers:{Accept:'text/event-stream',Authorization:`Bearer ${token()}`},signal:ctl.signal,cache:'no-store'});if([401,403,404].includes(res.status)){
+    // Revoked accounts must not reconnect forever or keep showing a stale private workspace.
+    if(!ctl.signal.aborted&&state.stream===ctl&&state.projectId===pid){
+      stopCollab();state.projectId='';state.documentId='';state.document=null;state.workspace=null;
+      state.localDraft=null;state.dirty=false;state.conflict=false;
+      state.projects=state.projects.filter(project=>project.id!==pid);draw();
+      notice('This shared workspace is no longer accessible. Any unsaved device draft was retained.',true);
+    }
+    return;
+  }
+  if(!res.ok||!res.body)throw Error('Live editor connection unavailable ('+res.status+').');const reader=res.body.getReader(),decoder=new TextDecoder();let buffer='';while(!ctl.signal.aborted){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});if(buffer.length>200000)throw Error('Live event stream exceeded size limit.');let end;while((end=buffer.indexOf('\n\n'))!==-1){const block=buffer.slice(0,end);buffer=buffer.slice(end+2);let type='message',data='';for(const line of block.split('\n')){if(line.startsWith('event:'))type=line.slice(6).trim();if(line.startsWith('data:'))data+=line.slice(5).trim();}if(data&&state.stream===ctl&&state.projectId===pid&&!ctl.signal.aborted)await handleEvent(type,JSON.parse(data));}}}catch(e){if(!ctl.signal.aborted)notice(`Live connection interrupted: ${e.message}. Reconnecting automatically.`,true);}
   finally{
     if(!ctl.signal.aborted&&state.stream===ctl&&state.projectId===pid){
       const delay=Math.min(20000,1500*2**Math.min(state.retryCount++,4));

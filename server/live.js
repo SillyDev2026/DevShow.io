@@ -5,7 +5,7 @@ export function publish(type,payload,recipient='') {
   for(const [res,info] of subscriptions){
     if(recipient && info.userId!==recipient)continue;
     if(info.scope==='private' && !recipient && type!=='activity')continue;
-    try{res.write(packet);}catch{subscriptions.delete(res);}
+    try{if(!res.write(packet)){subscriptions.delete(res);res.end();}}catch{subscriptions.delete(res);res.destroy();}
   }
 }
 export function liveStream(req,res,user){

@@ -6,7 +6,10 @@ const MAX_CLIENTS_PER_PROJECT=30;
 const MAX_CLIENTS_PER_USER=3;
 const eventId=()=>Date.now().toString(36);
 function send(res,type,data){if(res.writableEnded)return;res.write(`event: ${type}\nid: ${eventId()}\ndata: ${JSON.stringify(data)}\n\n`);}
-export function emit(projectId,type,payload){for(const client of subscribers.get(projectId)||[]){if(!access(projectId,{id:client.userId})){client.res.end();continue;}send(client.res,type,payload);}}
+export function emit(projectId,type,payload){for(const client of subscribers.get(projectId)||[]){
+  try{if(!access(projectId,{id:client.userId})){client.res.end();continue;}send(client.res,type,payload);}
+  catch{client.res.destroy();}
+}}
 export function stream(req,res,projectId,user){
   const role=access(projectId,user);
   if(!role)throw error(404,'Workspace not found.');
@@ -17,8 +20,11 @@ export function stream(req,res,projectId,user){
   send(res,'ready',{projectId,role,online:new Set([...clients].map(x=>x.userId)).size});
   emit(projectId,'presence',{online:new Set([...clients].map(x=>x.userId)).size});
   const pulse=setInterval(()=>{
-    if(!getUser(req)||!access(projectId,getUser(req))){cleanup();res.end();return;}
-    res.write(': ping\n\n');
+    try{
+      const current=getUser(req);
+      if(!current||!access(projectId,current)){cleanup();res.end();return;}
+      res.write(': ping\n\n');
+    }catch{cleanup();res.destroy();}
   },15000);
   pulse.unref?.();
   let closed=false;
