@@ -43,7 +43,10 @@ export class CodeEditor {
   insertNewline(){const s=this.input.selectionStart;this.replace(s,this.input.selectionEnd,newlineIndent(this.input.value,s));}
   replace(start,end,text,cursor=start+text.length){this.input.focus();this.input.setRangeText(text,start,end,'end');this.input.setSelectionRange(cursor,cursor);this.input.dispatchEvent(new Event('input',{bubbles:true}));}
   keydown(e){const input=this.input,ctrl=e.ctrlKey||e.metaKey;
-    if(ctrl&&['s','S','p','P','Enter'].includes(e.key)){e.preventDefault();this.onShortcut(e.key.toLowerCase());return;}
+    // A viewer may select and copy text, but no editor shortcut should mutate it.
+    // Ctrl+P is reserved for the browser's Print action.
+    if(input.readOnly||input.disabled)return;
+    if(ctrl&&(e.key==='s'||e.key==='S')){e.preventDefault();this.onShortcut('save');return;}
     if(e.key==='Tab'){e.preventDefault();const s=input.selectionStart,t=input.selectionEnd;if(s===t&&!e.shiftKey)this.replace(s,t,'    ');else{const before=input.value.lastIndexOf('\n',s-1)+1;const after=input.value.indexOf('\n',t);const last=after<0?input.value.length:after;const source=input.value.slice(before,last);let updated;if(e.shiftKey)updated=source.replace(/^ {1,4}/gm,'');else updated=source.replace(/^/gm,'    ');this.replace(before,last,updated,before+updated.length);}return;}
     if(e.key==='Enter'&&!ctrl&&!e.altKey&&!e.isComposing){e.preventDefault();this.insertNewline();return;}
     if(!ctrl&&!e.altKey&&!e.isComposing&&input.selectionStart===input.selectionEnd){const pos=input.selectionStart;const pairs={'(':')','[':']','{':'}','"':'"',"'":"'"};if(pairs[e.key]){e.preventDefault();this.replace(pos,pos,e.key+pairs[e.key],pos+1);return;}if([')',']','}'].includes(e.key)&&input.value[pos]===e.key){e.preventDefault();input.setSelectionRange(pos+1,pos+1);this.onCursor();}}

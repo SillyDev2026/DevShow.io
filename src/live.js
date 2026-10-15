@@ -9,9 +9,11 @@ export function startLive(onMessage){
   async function connect(){
     try{
       const response=await fetch(serverUrl()+'/api/events',{headers:{Authorization:`Bearer ${token()}`},signal,cache:'no-store'});
-      if(!response.ok||!response.body)return;
+      if(response.status===401||response.status===403){stopLive();return;}
+      if(!response.ok||!response.body)throw Error('Live stream unavailable ('+response.status+').');
       const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='';
       while(!signal.aborted){const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});
+        if(buffer.length>262144)throw Error('Live stream event exceeds safe size.');
         const parts=buffer.split('\n\n');buffer=parts.pop()||'';
         for(const part of parts){
           const eventLine=part.split('\n').find(line=>line.startsWith('event:'));
